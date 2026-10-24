@@ -78,6 +78,23 @@ describe("demo flow", async () => {
     expect(checks.find((c) => c.title.startsWith("Statement id"))?.ok).toBe(false);
   });
 
+  it("catches a passport whose displayed figure was edited outside the signature", async () => {
+    const p = buildPassport(passportArgs);
+    p.credentialSubject.embeddedEmissions.directPerTonne = 0.05;
+    const { checks } = await checkPassport(p, chain);
+    expect(checks.find((c) => c.title === "Displayed figures are the signed ones")?.ok).toBe(false);
+  });
+
+  it("applies two clicks at once one after the other", async () => {
+    const alloc = await act("operator", "allocate", [statementId, actors.importer2.address, 1_000_000n, shipmentRef("26TR341000EX000150")]);
+    const id = alloc.result as Hex;
+    const [a, b] = await Promise.all([
+      act("importer2", "declare", [id, declarationRef("IT-1")]),
+      act("importer2", "declare", [id, declarationRef("IT-2")]),
+    ]);
+    expect([a.status, b.status].sort()).toEqual(["reverted", "success"]);
+  });
+
   it("refuses to sell the same tonnes twice, and to declare twice", async () => {
     const over = await act("operator", "allocate", [statementId, actors.importer2.address, 170_000_000n, shipmentRef("26TR341000EX000102")]);
     expect(over.status).toBe("reverted");

@@ -5,7 +5,7 @@ import { hashTypedData, keccak256, encodeAbiParameters } from "viem";
 import { actors } from "@/lib/chain/actors";
 import { attestationTypes, registryDomain } from "@/lib/chain/eip712";
 import { disclose, commit } from "@/lib/crypto/disclosure";
-import { buildPassport, checkPassport, type Passport, type PassportCheck } from "@/lib/passport";
+import { buildPassport, checkPassport, looksLikePassport, type Passport, type PassportCheck } from "@/lib/passport";
 import { exampleDelivery, getWorld, shipmentRef, sign, smelterAttestation, smelterReport, smelterSeed } from "@/lib/demo/world";
 import { supplier } from "@/lib/samples/marmara";
 import { Badge } from "@/components/ui/Badge";
@@ -63,7 +63,9 @@ export function PassportChecker() {
   );
   const link = useMemo(() => {
     const m = hash.match(/p=([A-Za-z0-9_-]+)/);
-    return m ? { passport: decode(m[1]) } : null;
+    if (!m) return null;
+    const p = decode(m[1]);
+    return { passport: looksLikePassport(p) ? p : null };
   }, [hash]);
   const [manual, setManual] = useState<Passport | null>(null);
   const passport = manual ?? link?.passport ?? null;
@@ -107,10 +109,12 @@ export function PassportChecker() {
             <Button
               onClick={() => {
                 try {
-                  setManual(JSON.parse(text));
+                  const parsed = JSON.parse(text);
+                  if (!looksLikePassport(parsed)) throw new Error("shape");
+                  setManual(parsed);
                   setInputError(null);
                 } catch {
-                  setInputError("That is not valid JSON.");
+                  setInputError("That is not a passport: it needs credentialSubject, proof.eip712 and anchor.");
                 }
               }}
               disabled={!text.trim()}
@@ -143,7 +147,7 @@ export function PassportChecker() {
               </p>
             </div>
             <div className="text-right">
-              <p className="num font-display text-4xl font-extrabold text-verified">{subject.embeddedEmissions.directPerTonne.toFixed(3)}</p>
+              <p className="num font-display text-4xl font-extrabold text-verified">{(Number(passport.proof.eip712.message.directKgPerTonne) / 1000).toFixed(3)}</p>
               <p className="text-sm text-ink-2">t CO2e per tonne, direct</p>
               <div className="mt-2">
                 {result ? ok ? <Badge tone="verified">valid · {result.status}</Badge> : <Badge tone="refused">does not check out</Badge> : <Badge>checking…</Badge>}

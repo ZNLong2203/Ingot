@@ -107,6 +107,12 @@ export interface PassportCheck {
 const STATUS = ["none", "open", "declared", "consumed"] as const;
 
 /** Checks a passport against the ledger it names. */
+/** True when the object has the parts a passport check needs. */
+export function looksLikePassport(x: unknown): x is Passport {
+  const p = x as Passport;
+  return Boolean(p?.proof?.eip712?.message && p?.proof?.proofValue && p?.credentialSubject?.allocation && p?.credentialSubject?.embeddedEmissions && p?.anchor?.statementId);
+}
+
 export async function checkPassport(p: Passport, chain: SandboxChain): Promise<{ checks: PassportCheck[]; status: string }> {
   const checks: PassportCheck[] = [];
   const { domain } = p.proof.eip712;
@@ -124,10 +130,27 @@ export async function checkPassport(p: Passport, chain: SandboxChain): Promise<{
   });
 
   const digest = hashTypedData({ domain, types: attestationTypes, primaryType: "Attestation", message });
+  const idOk = digest.toLowerCase() === p.anchor.statementId.toLowerCase();
   checks.push({
     title: "Statement id is the hash of what the verifier signed",
-    ok: digest === p.anchor.statementId,
-    detail: digest === p.anchor.statementId ? short(digest) : "The passport's fields do not hash to its statement id.",
+    ok: idOk,
+    detail: idOk ? short(digest) : "The passport's fields do not hash to its statement id.",
+  });
+
+  // Everything shown to the reader must come from what was signed, not from free text.
+  const subj = p.credentialSubject;
+  const day = (s: number) => new Date(s * 1000).toISOString().slice(0, 10);
+  const mismatches = [
+    subj.embeddedEmissions.directPerTonne !== message.directKgPerTonne / 1000 && "direct emissions",
+    subj.embeddedEmissions.indirectPerTonne !== message.indirectKgPerTonne / 1000 && "indirect emissions",
+    subj.installation.id.toLowerCase() !== message.installationId.toLowerCase() && "installation",
+    subj.good.cnCode !== message.cnCode && "CN code",
+    (subj.period.from !== day(message.periodStart) || subj.period.to !== day(message.periodEnd)) && "period",
+  ].filter(Boolean);
+  checks.push({
+    title: "Displayed figures are the signed ones",
+    ok: mismatches.length === 0,
+    detail: mismatches.length ? `Edited after signing: ${mismatches.join(", ")}.` : "Emissions, installation, CN code and period match the signature.",
   });
 
   const signer = await recoverTypedDataAddress({ domain, types: attestationTypes, primaryType: "Attestation", message, signature: p.proof.proofValue }).catch(() => null);
@@ -142,11 +165,15 @@ export async function checkPassport(p: Passport, chain: SandboxChain): Promise<{
     ok: Boolean(statement),
     detail: statement ? `Recorded at ${new Date(statement.attestedAt * 1000).toUTCString()}.` : "No such statement on this ledger.",
   });
+  // The registry only records statements whose signer was accredited at the time.
   const accredited = signer ? await chain.read("isAccredited", [signer]) : false;
+  const sameSigner = Boolean(signer && statement && signer.toLowerCase() === statement.verifier.toLowerCase());
   checks.push({
-    title: "Signed by an accredited verifier",
-    ok: Boolean(signer && statement && signer.toLowerCase() === statement.verifier.toLowerCase() && accredited),
-    detail: signer ? `${actorByAddress(signer)?.name ?? short(signer)}${accredited ? ", accreditation current" : ", NOT accredited now"}.` : "The signature does not recover.",
+    title: "Signed by the accredited verifier on record",
+    ok: sameSigner,
+    detail: signer
+      ? `${actorByAddress(signer)?.name ?? short(signer)}; accredited when recorded${accredited ? ", still accredited" : ", since suspended or expired"}.`
+      : "The signature does not recover.",
   });
   if (statement) {
     checks.push({
@@ -161,16 +188,17 @@ export async function checkPassport(p: Passport, chain: SandboxChain): Promise<{
     const al = await chain.read("getAllocation", [p.credentialSubject.allocation.id]);
     status = STATUS[al.status] ?? "unknown";
     const matches =
-      al.statementId === p.anchor.statementId &&
+      al.statementId.toLowerCase() === p.anchor.statementId.toLowerCase() &&
       al.recipient.toLowerCase() === p.credentialSubject.allocation.recipient.toLowerCase() &&
-      Number(al.quantityKg) / 1000 === p.credentialSubject.allocation.tonnes;
+      al.shipmentRef.toLowerCase() === p.credentialSubject.allocation.shipmentRef.toLowerCase() &&
+      al.quantityKg === BigInt(Math.round(p.credentialSubject.allocation.tonnes * 1000));
     checks.push({
-      title: "Allocation matches: statement, recipient, tonnes",
+      title: "Allocation matches: statement, recipient, shipment, tonnes",
       ok: matches,
       detail: matches ? `${p.credentialSubject.allocation.tonnes.toLocaleString("en-US")} t to ${p.credentialSubject.allocation.recipientName ?? short(al.recipient)}, ${status}.` : "The ledger's allocation differs from the passport.",
     });
   } catch {
-    checks.push({ title: "Allocation matches: statement, recipient, tonnes", ok: false, detail: "No such allocation on this ledger." });
+    checks.push({ title: "Allocation matches: statement, recipient, shipment, tonnes", ok: false, detail: "No such allocation on this ledger." });
   }
 
   if (statement) {
