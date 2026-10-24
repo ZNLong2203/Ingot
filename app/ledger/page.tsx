@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LedgerView } from "@/components/ledger/LedgerView";
+import { TestnetCard } from "@/components/ledger/TestnetCard";
 
 export const metadata: Metadata = {
   title: "Ledger",
@@ -16,6 +17,7 @@ export default function LedgerPage() {
         meter readings never appear here, only their committed root.
       </p>
       <div className="mt-8">
+        <TestnetCard />
         <LedgerView />
       </div>
     </main>
