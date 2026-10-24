@@ -1,0 +1,13 @@
+# Never uploaded to the deployment.
+/private
+.env
+.env.*
+!.env.example
+/.claude
+/AGENTS.md
+/CLAUDE.md
+/artifacts
+/cache
+/types
+/coverage
+/e2e/out
