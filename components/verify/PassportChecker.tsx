@@ -90,7 +90,7 @@ export function PassportChecker() {
   return (
     <div className="space-y-6">
       {!passport && (
-        <section className="space-y-3 rounded-xl border border-line bg-card p-5">
+        <section className="card space-y-3 p-5">
           <p className="text-sm text-ink-2">
             Paste a passport (JSON), open the link the mill sent with the shipment, or load the example: the smelter&apos;s pig iron delivered to an
             Italian buyer, already on this ledger.
@@ -127,7 +127,8 @@ export function PassportChecker() {
 
       {passport && subject && (
         <>
-          <section className="grid gap-4 rounded-xl border border-line bg-card p-5 md:grid-cols-[1fr_auto]">
+          <section className="card relative grid gap-4 overflow-hidden p-5 pt-6 md:grid-cols-[1fr_auto]">
+            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[var(--mill)] via-[var(--verifier)] to-[var(--importer)]" />
             <div>
               <p className="text-xs uppercase tracking-wide text-muted">CBAM embedded-emissions passport</p>
               <h2 className="mt-1 font-display text-xl font-bold">
@@ -142,7 +143,7 @@ export function PassportChecker() {
               </p>
             </div>
             <div className="text-right">
-              <p className="num font-display text-4xl font-bold">{subject.embeddedEmissions.directPerTonne.toFixed(3)}</p>
+              <p className="num font-display text-4xl font-extrabold text-verified">{subject.embeddedEmissions.directPerTonne.toFixed(3)}</p>
               <p className="text-sm text-ink-2">t CO2e per tonne, direct</p>
               <div className="mt-2">
                 {result ? ok ? <Badge tone="verified">valid · {result.status}</Badge> : <Badge tone="refused">does not check out</Badge> : <Badge>checking…</Badge>}
@@ -151,12 +152,21 @@ export function PassportChecker() {
           </section>
 
           {result && (
-            <section className="rounded-xl border border-line bg-card">
-              <h3 className="border-b border-line px-5 py-3 font-display text-sm font-semibold">Checked against the ledger</h3>
+            <section className="card overflow-hidden">
+              <h3 className="flex items-center justify-between border-b border-line bg-chain-soft/60 px-5 py-3 font-display text-sm font-semibold">
+                <span className="flex items-center gap-2">
+                  <Icon name="chain" className="h-4 w-4 text-chain" /> Checked against the ledger
+                </span>
+                <span className={`rounded-full px-2.5 py-0.5 text-xs ${ok ? "bg-verified-soft text-verified" : "bg-refused-soft text-refused"}`}>
+                  {result.checks.filter((c) => c.ok).length}/{result.checks.length} pass
+                </span>
+              </h3>
               <ul className="divide-y divide-line">
                 {result.checks.map((c) => (
                   <li key={c.title} className="flex items-start gap-3 px-5 py-3 text-sm">
-                    <Icon name={c.ok ? "check" : "cross"} className={`mt-0.5 h-4 w-4 shrink-0 ${c.ok ? "text-verified" : "text-refused"}`} />
+                    <span className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white ${c.ok ? "bg-verified" : "bg-refused"}`}>
+                      <Icon name={c.ok ? "check" : "cross"} className="h-3 w-3" />
+                    </span>
                     <span>
                       <span className="font-medium">{c.title}</span>
                       <span className="block text-xs text-muted">{c.detail}</span>
@@ -168,8 +178,10 @@ export function PassportChecker() {
           )}
 
           <section className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-xl border border-line bg-card p-5 text-sm">
-              <h3 className="font-display text-sm font-semibold">Anchor</h3>
+            <div className="card p-5 text-sm">
+              <h3 className="flex items-center gap-2 font-display text-sm font-semibold">
+                <Icon name="chain" className="h-4 w-4 text-chain" /> Anchor
+              </h3>
               <dl className="mt-2 space-y-1 text-xs text-ink-2">
                 <div>
                   <dt className="inline text-muted">Network: </dt>
@@ -203,13 +215,15 @@ export function PassportChecker() {
                 against the public testnet deployment.
               </p>
             </div>
-            <div className="rounded-xl border border-line bg-card p-5 text-sm">
-              <h3 className="font-display text-sm font-semibold">Disclosed fields</h3>
+            <div className="card p-5 text-sm">
+              <h3 className="flex items-center gap-2 font-display text-sm font-semibold">
+                <Icon name="eye" className="h-4 w-4 text-chain" /> Disclosed fields
+              </h3>
               <ul className="mt-2 space-y-1 text-xs">
                 {subject.disclosures.map((d) => (
                   <li key={d.key} className="flex justify-between gap-3">
                     <span className="text-ink-2">{d.key}</span>
-                    <span className="num font-medium">{d.value}</span>
+                    <span className="num rounded-md bg-chain-soft px-1.5 font-semibold text-chain">{d.value}</span>
                   </li>
                 ))}
               </ul>

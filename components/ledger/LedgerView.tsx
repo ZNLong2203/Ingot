@@ -49,8 +49,8 @@ export function LedgerView() {
           const allocs = byStatement(id);
           const pct = Number((s.allocatedKg * 1000n) / s.quantityKg) / 10;
           return (
-            <article key={id} className="rounded-xl border border-line bg-card">
-              <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4">
+            <article key={id} className="card overflow-hidden">
+              <header className={`flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4 ${s.revoked ? "bg-refused-soft" : inputs.length ? "bg-mill-soft/60" : "bg-verifier-soft/50"}`}>
                 <div>
                   <p className="text-xs uppercase tracking-wide text-muted">
                     Statement <Hash value={id} /> · CN {s.cnCode} · {date(s.periodStart)} → {date(s.periodEnd)}
@@ -61,7 +61,7 @@ export function LedgerView() {
                   <p className="text-xs text-muted">Signed by {actorByAddress(s.verifier)?.name ?? s.verifier}</p>
                 </div>
                 <div className="text-right">
-                  <p className="num font-display text-2xl font-bold">{(s.directKgPerTonne / 1000).toFixed(3)}</p>
+                  <p className="num font-display text-3xl font-extrabold text-verified">{(s.directKgPerTonne / 1000).toFixed(3)}</p>
                   <p className="text-xs text-muted">t CO2e/t direct</p>
                   {s.revoked ? <Badge tone="refused">withdrawn</Badge> : <Badge tone="verified">live</Badge>}
                 </div>
@@ -91,7 +91,7 @@ export function LedgerView() {
                     <span>{pct.toFixed(1)} %</span>
                   </div>
                   <div className="mt-1 h-2 rounded-full bg-paper-2">
-                    <div className="h-2 rounded-full bg-ink" style={{ width: `${Math.max(pct, 0.5)}%` }} />
+                    <div className="h-2 rounded-full bg-gradient-to-r from-[var(--mill)] to-[#f59e0b]" style={{ width: `${Math.max(pct, 0.5)}%` }} />
                   </div>
                 </div>
                 {allocs.length > 0 && (
