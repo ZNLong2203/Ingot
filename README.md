@@ -6,7 +6,7 @@ Since 1 January 2026 EU importers pay for the carbon embedded in steel, aluminiu
 
 **IEEE ClimateChain Global Hackathon 2026 · Track: Carbon Markets & Emissions Transparency** (with Sustainable Supply Chains alongside).
 
-**Live demo: [ingot-six-blush.vercel.app](https://ingot-six-blush.vercel.app)** · **Video (3 min): _link added at submission_** · Try it in five minutes: open *Try the flow*, press *Read all 7 documents*, and follow the steps; the buttons marked *Try to cheat* send real transactions that the contract refuses.
+**Live demo: [ingot-six-blush.vercel.app](https://ingot-six-blush.vercel.app)** · **Video (3 min): [youtube.com/watch?v=1auhQuJh6Gg](https://www.youtube.com/watch?v=1auhQuJh6Gg)** · Try it in five minutes: open *Try the flow*, press *Read all 7 documents*, and follow the steps; the buttons marked *Try to cheat* send real transactions that the contract refuses.
 
 **On Ethereum Sepolia:** the same contract runs at [`0x81700eedd80142d65859616101e521729fd95473`](https://eth-sepolia.blockscout.com/address/0x81700eedd80142d65859616101e521729fd95473), source verified ([exact match on Sourcify](https://repo.sourcify.dev/11155111/0x81700eedd80142d65859616101e521729fd95473)). The demo was replayed there, including a [double sale the contract refused](https://eth-sepolia.blockscout.com/tx/0x91327120ce38dafdf9e444d87a143ff75fd7b15fafc0d06c0edeba5a660647ed) (`ExceedsVerifiedQuantity`), and [*Check a passport*](https://ingot-six-blush.vercel.app/verify) checks a passport against it live.
 
