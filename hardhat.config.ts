@@ -17,13 +17,14 @@ export default defineConfig({
     npmFilesToBuild: [],
   },
   networks: {
-    // Public testnet. The key is read from the Hardhat keystore or the
+    // Public testnet, used to verify the source after scripts/deploy-testnet.ts.
+    // Same variables as .env; the key is read from the Hardhat keystore or the
     // environment, never from this file.
     sepolia: {
       type: "http",
       chainType: "l1",
-      url: configVariable("SEPOLIA_RPC_URL"),
-      accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+      url: configVariable("RPC_URL"),
+      accounts: [configVariable("DEPLOYER_PRIVATE_KEY")],
     },
   },
 });

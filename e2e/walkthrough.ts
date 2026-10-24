@@ -85,6 +85,14 @@ await click(/Load the example/);
 await page.getByText(/valid · open/).waitFor();
 await shot("07-verify", /CBAM embedded-emissions passport/);
 
+// The same check against the registry on the public testnet, read through a public RPC node.
+await click(/Check another/);
+if (await page.getByRole("button", { name: /Example on Ethereum Sepolia/ }).count()) {
+  await click(/Example on Ethereum Sepolia/);
+  await page.getByText(/Checked against Ethereum Sepolia/).waitFor({ timeout: 60_000 });
+  await page.getByText(/valid · open/).waitFor();
+}
+
 if (!FRAME) {
   await page.goto(`${BASE}/method`);
   await shot("08-method");

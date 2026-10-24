@@ -8,7 +8,7 @@ import { demoPqKeys, pqSign } from "@/lib/crypto/pq";
 import { referenceExtraction, deriveLines, deliveryNoteNumbers } from "./derive";
 import { commit, disclosuresFor, findPrecursors, prepareAttestation, reportFields } from "./flow";
 import type { DemoState } from "./store";
-import { act, declarationRef, getWorld, shipmentRef, sign } from "./world";
+import { act, declarationRef, examplePassport, getWorld, shipmentRef, sign, smelterAttestation } from "./world";
 
 /** The whole guided demo, end to end, on the sandbox chain. */
 describe("demo flow", async () => {
@@ -26,6 +26,13 @@ describe("demo flow", async () => {
     expect(duplicates).toHaveLength(1);
     expect(lines.filter((l) => l.excluded)).toHaveLength(1);
     expect(lines.find((l) => l.excluded)?.documentId).toBe("gas-2026-08-copy");
+  });
+
+  it("checks the example passport on /verify against the seeded ledger", async () => {
+    const p = await examplePassport({ chainId: chain.chainId, registry: chain.registry, attestation: smelterAttestation(), issuedAt: chain.now });
+    const { checks, status } = await checkPassport(p, chain);
+    expect(checks.filter((c) => !c.ok)).toEqual([]);
+    expect(status).toBe("open");
   });
 
   let statementId: Hex;

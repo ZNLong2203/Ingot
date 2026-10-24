@@ -97,7 +97,7 @@ export default function Home() {
               </Link>
             </div>
             <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted">
-              {["No wallet needed", "Real EVM in your browser", "About 5 minutes"].map((t) => (
+              {["No wallet needed", "Real EVM in your browser", "Also live on Ethereum Sepolia", "About 5 minutes"].map((t) => (
                 <li key={t} className="flex items-center gap-1.5">
                   <Icon name="check" className="h-4 w-4 text-verified" /> {t}
                 </li>

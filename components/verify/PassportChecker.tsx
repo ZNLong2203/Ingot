@@ -1,14 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { hashTypedData, keccak256, encodeAbiParameters } from "viem";
-import { actors } from "@/lib/chain/actors";
-import { attestationTypes, registryDomain } from "@/lib/chain/eip712";
-import { disclose, commit } from "@/lib/crypto/disclosure";
-import { demoPqKeys, pqSign } from "@/lib/crypto/pq";
-import { buildPassport, checkPassport, looksLikePassport, type Passport, type PassportCheck } from "@/lib/passport";
-import { exampleDelivery, getWorld, shipmentRef, sign, smelterAttestation, smelterReport, smelterSeed } from "@/lib/demo/world";
-import { supplier } from "@/lib/samples/marmara";
+import { findDeployment, networks, publicDeployments } from "@/lib/chain/public";
+import { SANDBOX_CHAIN_ID } from "@/lib/chain/sandbox";
+import { checkPassport, looksLikePassport, type Ledger, type Passport, type PassportCheck } from "@/lib/passport";
+import { examplePassport, getWorld, smelterAttestation } from "@/lib/demo/world";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Hash } from "@/components/ui/Hash";
@@ -26,31 +22,25 @@ function decode(fragment: string): Passport | null {
 }
 
 /** The smelter's delivery to the Italian buyer, seeded in every sandbox. */
-async function examplePassport(): Promise<Passport> {
+async function sandboxExample(): Promise<Passport> {
   const chain = await getWorld();
-  const a = smelterAttestation();
-  const statementId = hashTypedData({ domain: registryDomain(chain.chainId, chain.registry), types: attestationTypes, primaryType: "Attestation", message: a });
-  const report = commit(smelterReport, smelterSeed);
-  return buildPassport({
-    chain,
-    attestation: a,
-    signature: await sign(chain, "verifier2", a),
-    verifier: actors.verifier2.address,
-    statementId,
-    installation: { name: supplier.name, country: supplier.country },
-    good: { cnCode: supplier.good.cnCode, description: supplier.good.label },
-    period: { from: supplier.period.from, to: supplier.period.to },
-    allocation: {
-      id: keccak256(encodeAbiParameters([{ type: "bytes32" }, { type: "uint256" }], [statementId, exampleDelivery.index])),
-      tonnes: exampleDelivery.tonnes,
-      recipient: actors.importer2.address,
-      shipmentRef: shipmentRef(exampleDelivery.reference),
-      reference: exampleDelivery.reference,
-    },
-    disclosures: ["directKgPerTonne", "route", "period"].map((k) => disclose(report, k)),
-    issuedAt: chain.now,
-    pq: { publicKey: demoPqKeys("verifier2").publicKey, signature: pqSign(statementId, demoPqKeys("verifier2").secretKey) },
+  return examplePassport({ chainId: chain.chainId, registry: chain.registry, attestation: smelterAttestation(), issuedAt: chain.now });
+}
+
+/** The same delivery on the public testnet, issued when the demo was replayed there. */
+const publicExample = publicDeployments.find((d) => d.examplePassport && networks[d.chainId]?.rpc);
+
+/** The ledger a passport names: this browser's sandbox, or a public deployment read over RPC. */
+async function ledgerFor(p: Passport): Promise<Ledger> {
+  if (p.anchor.chainId === SANDBOX_CHAIN_ID) return getWorld();
+  const found = findDeployment(p.anchor.chainId, p.anchor.registry);
+  if (!found) throw new Error(`This passport is anchored on chain ${p.anchor.chainId} at ${p.anchor.registry}, which this page cannot read.`);
+  const name = networks[p.anchor.chainId].name;
+  // One read first, so a network failure is not reported as a missing statement.
+  await found.ledger.read("isAccredited", [p.anchor.registry]).catch(() => {
+    throw new Error(`Could not reach ${name}. Check the connection and try again.`);
   });
+  return found.ledger;
 }
 
 export function PassportChecker() {
@@ -79,7 +69,7 @@ export function PassportChecker() {
   useEffect(() => {
     if (!passport) return;
     let live = true;
-    getWorld()
+    ledgerFor(passport)
       .then((chain) => checkPassport(passport, chain))
       .then((r) => live && setResult(r))
       .catch((e) => live && setInputError((e as Error).message));
@@ -90,14 +80,15 @@ export function PassportChecker() {
 
   const ok = result?.checks.every((c) => c.ok);
   const subject = passport?.credentialSubject;
+  const net = passport && passport.anchor.chainId !== SANDBOX_CHAIN_ID ? networks[passport.anchor.chainId] : undefined;
 
   return (
     <div className="space-y-6">
       {!passport && (
         <section className="card space-y-3 p-5">
           <p className="text-sm text-ink-2">
-            Paste a passport (JSON), open the link the mill sent with the shipment, or load the example: the smelter&apos;s pig iron delivered to an
-            Italian buyer, already on this ledger.
+            Paste a passport (JSON), open the link the mill sent with the shipment, or load an example: the smelter&apos;s pig iron delivered to an
+            Italian buyer, on this browser&apos;s ledger or on the public testnet.
           </p>
           <textarea
             value={text}
@@ -123,9 +114,14 @@ export function PassportChecker() {
             >
               <Icon name="shield" /> Check this passport
             </Button>
-            <Button tone="secondary" onClick={async () => setManual(await examplePassport())}>
+            <Button tone="secondary" onClick={async () => setManual(await sandboxExample())}>
               Load the example
             </Button>
+            {publicExample?.examplePassport && (
+              <Button tone="secondary" onClick={() => setManual(publicExample.examplePassport!)}>
+                <Icon name="chain" /> Example on {networks[publicExample.chainId].name}
+              </Button>
+            )}
           </div>
         </section>
       )}
@@ -161,7 +157,7 @@ export function PassportChecker() {
             <section className="card overflow-hidden">
               <h3 className="flex items-center justify-between border-b border-line bg-chain-soft/60 px-5 py-3 font-display text-sm font-semibold">
                 <span className="flex items-center gap-2">
-                  <Icon name="chain" className="h-4 w-4 text-chain" /> Checked against the ledger
+                  <Icon name="chain" className="h-4 w-4 text-chain" /> Checked against {net ? `${net.name}, live` : "the ledger"}
                 </span>
                 <span className={`rounded-full px-2.5 py-0.5 text-xs ${ok ? "bg-verified-soft text-verified" : "bg-refused-soft text-refused"}`}>
                   {result.checks.filter((c) => c.ok).length}/{result.checks.length} pass
@@ -191,12 +187,17 @@ export function PassportChecker() {
               <dl className="mt-2 space-y-1 text-xs text-ink-2">
                 <div>
                   <dt className="inline text-muted">Network: </dt>
-                  <dd className="inline">{passport.anchor.network === "sandbox" ? "EVM sandbox in this browser" : passport.anchor.network}</dd>
+                  <dd className="inline">{net ? `${net.name} (public testnet)` : "EVM sandbox in this browser"}</dd>
                 </div>
                 <div>
                   <dt className="inline text-muted">Registry: </dt>
                   <dd className="inline">
                     <Hash value={passport.anchor.registry} />
+                    {net && (
+                      <a className="ml-2 text-chain underline underline-offset-2" href={`${net.explorer}/address/${passport.anchor.registry}`} target="_blank" rel="noreferrer">
+                        explorer ↗
+                      </a>
+                    )}
                   </dd>
                 </div>
                 <div>
@@ -217,8 +218,9 @@ export function PassportChecker() {
                 </div>
               </dl>
               <p className="mt-3 text-xs text-muted">
-                The sandbox ledger lives in your browser. A passport issued in another browser checks against that browser&apos;s ledger, or
-                against the public testnet deployment.
+                {net
+                  ? `Every check was read live from the registry on ${net.name} through a public RPC node, so it works from any browser.`
+                  : "The sandbox ledger lives in your browser, so a passport issued in another browser checks only there. Passports anchored on the public testnet check from anywhere."}
               </p>
             </div>
             <div className="card p-5 text-sm">

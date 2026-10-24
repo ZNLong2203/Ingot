@@ -35,8 +35,12 @@ export interface Passport {
     /** Post-quantum co-signature over the statement id; its key hash is registered on chain. */
     pq?: { algorithm: string; publicKey: string; proofValue: string };
   };
-  anchor: { network: "sandbox" | "sepolia"; chainId: number; registry: Address; statementId: Hex };
+  /** "sandbox" for the EVM in the page, otherwise the public network's slug, e.g. "sepolia". */
+  anchor: { network: string; chainId: number; registry: Address; statementId: Hex };
 }
+
+/** What a passport check needs from a ledger: the sandbox in the page, or the registry on a public network. */
+export type Ledger = Pick<SandboxChain, "read"> & { chainId: number; registry: Address };
 
 /** The attestation as JSON: 64-bit fields travel as decimal strings. */
 export type JsonAttestation = Omit<Attestation, "quantityKg" | "precursorDirectKg" | "precursorIndirectKg"> & {
@@ -56,7 +60,9 @@ export function fromJson(a: JsonAttestation): Attestation {
 const did = (chainId: number, a: Address) => `did:pkh:eip155:${chainId}:${a}`;
 
 export function buildPassport(opts: {
-  chain: SandboxChain;
+  chain: { chainId: number; registry: Address };
+  /** Defaults to "sandbox". */
+  network?: string;
   attestation: Attestation;
   signature: Hex;
   verifier: Address;
@@ -99,7 +105,7 @@ export function buildPassport(opts: {
       eip712: { domain: registryDomain(chain.chainId, chain.registry), primaryType: "Attestation", message: toJson(a) },
       ...(opts.pq ? { pq: { algorithm: PQ_ALGORITHM, publicKey: toBase64(opts.pq.publicKey), proofValue: toBase64(opts.pq.signature) } } : {}),
     },
-    anchor: { network: "sandbox", chainId: chain.chainId, registry: chain.registry, statementId: opts.statementId },
+    anchor: { network: opts.network ?? "sandbox", chainId: chain.chainId, registry: chain.registry, statementId: opts.statementId },
   };
 }
 
@@ -111,14 +117,14 @@ export interface PassportCheck {
 
 const STATUS = ["none", "open", "declared", "consumed"] as const;
 
-/** Checks a passport against the ledger it names. */
 /** True when the object has the parts a passport check needs. */
 export function looksLikePassport(x: unknown): x is Passport {
   const p = x as Passport;
   return Boolean(p?.proof?.eip712?.message && p?.proof?.proofValue && p?.credentialSubject?.allocation && p?.credentialSubject?.embeddedEmissions && p?.anchor?.statementId);
 }
 
-export async function checkPassport(p: Passport, chain: SandboxChain): Promise<{ checks: PassportCheck[]; status: string }> {
+/** Checks a passport against the ledger it names. */
+export async function checkPassport(p: Passport, chain: Ledger): Promise<{ checks: PassportCheck[]; status: string }> {
   const checks: PassportCheck[] = [];
   const { domain } = p.proof.eip712;
   let message: Attestation;
@@ -251,7 +257,7 @@ export async function checkPassport(p: Passport, chain: SandboxChain): Promise<{
   return { checks, status };
 }
 
-async function readStatement(chain: SandboxChain, id: Hex) {
+async function readStatement(chain: Ledger, id: Hex) {
   return chain.read("getStatement", [id]);
 }
 

@@ -6,7 +6,8 @@
 //   RPC_URL=… DEPLOYER_PRIVATE_KEY=0x… npx tsx scripts/deploy-testnet.ts
 //
 // The deployer becomes the accreditation authority and funds the demo actors'
-// throwaway keys with a little gas. Results go to lib/chain/deployments.json.
+// throwaway keys with a little gas. Results go to lib/chain/deployments.json,
+// with the example passport that /verify checks against this network.
 import { readFile, writeFile } from "node:fs/promises";
 import {
   bytesToHex,
@@ -22,6 +23,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { actors, type Role } from "@/lib/chain/actors";
 import { attestationTypes, hashInputs, precursorEmissions, registryDomain, type Attestation } from "@/lib/chain/eip712";
+import { networks } from "@/lib/chain/public";
 import { registryAbi, registryBytecode } from "@/lib/chain/registry-artifact";
 import { calculate } from "@/lib/cbam/calculate";
 import { sefaActualCoil } from "@/lib/cbam/cost";
@@ -30,7 +32,7 @@ import { demoPqKeys, pqKeyHash } from "@/lib/crypto/pq";
 import { deriveLines, referenceExtraction } from "@/lib/demo/derive";
 import { reportFields } from "@/lib/demo/flow";
 import type { DemoState } from "@/lib/demo/store";
-import { declarationRef, exampleDelivery, ids, shipmentRef, smelterAttestation, unix } from "@/lib/demo/world";
+import { declarationRef, exampleDelivery, examplePassport, ids, shipmentRef, smelterAttestation, unix } from "@/lib/demo/world";
 import { documents, installation, supplier } from "@/lib/samples/marmara";
 
 const rpc = process.env.RPC_URL;
@@ -39,7 +41,6 @@ if (!rpc || !key) throw new Error("Set RPC_URL and DEPLOYER_PRIVATE_KEY.");
 
 const probe = createPublicClient({ transport: http(rpc) });
 const chainId = await probe.getChainId();
-const explorers: Record<number, string> = { 11155111: "https://sepolia.etherscan.io", 84532: "https://sepolia.basescan.org", 80002: "https://amoy.polygonscan.com" };
 const chain = defineChain({ id: chainId, name: `chain-${chainId}`, nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }, rpcUrls: { default: { http: [rpc] } } });
 const pub = createPublicClient({ chain, transport: http(rpc) });
 const deployer = privateKeyToAccount(key);
@@ -87,6 +88,13 @@ const pigId = (await result("statementIds", [0n])) as Hex;
 await call("supplier", "Pig iron to the mill (DN-2026-0642)", "allocate", [pigId, actors.operator.address, BigInt(supplier.deliveredTonnes) * 1000n, shipmentRef(supplier.deliveryNote)]);
 await call("supplier", "Pig iron to another buyer", "allocate", [pigId, actors.importer2.address, BigInt(exampleDelivery.tonnes) * 1000n, shipmentRef(exampleDelivery.reference)]);
 const inputId = (await result("allocationIds", [0n])) as Hex;
+const passport = await examplePassport({
+  chainId,
+  registry,
+  network: networks[chainId]?.slug ?? `eip155-${chainId}`,
+  attestation: pig,
+  issuedAt: Number((await pub.getBlock()).timestamp),
+});
 
 const state = { step: 0, runs: Object.fromEntries(documents.map((d) => [d.id, { status: "done", source: "reference", extraction: referenceExtraction(d) }])), uploads: [], removed: {}, shipments: [] } as DemoState;
 const precursor = { allocationId: inputId, label: "Pig iron", quantityTonnes: supplier.deliveredTonnes, directKgPerTonne: supplier.directKgPerTonne, indirectKgPerTonne: supplier.indirectKgPerTonne };
@@ -130,7 +138,16 @@ const file = "lib/chain/deployments.json";
 const existing = JSON.parse(await readFile(file, "utf8").catch(() => '{"deployments":[]}'));
 existing.deployments = [
   ...existing.deployments.filter((d: { chainId: number }) => d.chainId !== chainId),
-  { chainId, explorer: explorers[chainId] ?? null, registry, deployedAt: new Date().toISOString(), statements: { smelter: pigId, mill: millId }, transactions: log },
+  {
+    chainId,
+    explorer: networks[chainId]?.explorer ?? null,
+    registry,
+    deployedAt: new Date().toISOString(),
+    statements: { smelter: pigId, mill: millId },
+    transactions: log,
+    examplePassport: passport,
+  },
 ];
 await writeFile(file, `${JSON.stringify(existing, null, 2)}\n`);
 console.log(`\nRegistry ${registry} on chain ${chainId}. Saved to ${file}.`);
+console.log(`Verify the source: npx hardhat verify sourcify --network ${networks[chainId]?.slug ?? "<network>"} --build-profile default ${registry} ${deployer.address}`);

@@ -1,10 +1,11 @@
-import { keccak256, toHex, type Hex } from "viem";
+import { encodeAbiParameters, hashTypedData, keccak256, toHex, type Address, type Hex } from "viem";
 import { actors, type Role } from "@/lib/chain/actors";
 import { attestationTypes, hashInputs, precursorEmissions, registryDomain, type Attestation } from "@/lib/chain/eip712";
 import { SandboxChain, type ReplayEntry, type SandboxTx } from "@/lib/chain/sandbox";
-import { commit } from "@/lib/crypto/disclosure";
+import { commit, disclose } from "@/lib/crypto/disclosure";
 import { deserialize, serialize } from "@/lib/json";
-import { demoPqKeys, pqKeyHash } from "@/lib/crypto/pq";
+import { demoPqKeys, pqKeyHash, pqSign } from "@/lib/crypto/pq";
+import { buildPassport, type Passport } from "@/lib/passport";
 import { installation, supplier } from "@/lib/samples/marmara";
 
 /**
@@ -29,7 +30,7 @@ export const reasonHash = (text: string) => keccak256(toHex(text));
 
 export const unix = (iso: string) => Date.parse(`${iso}T00:00:00Z`) / 1000;
 
-export async function sign(chain: SandboxChain, role: Role, a: Attestation): Promise<Hex> {
+export async function sign(chain: { chainId: number; registry: Address }, role: Role, a: Attestation): Promise<Hex> {
   return actors[role].account.signTypedData({
     domain: registryDomain(chain.chainId, chain.registry),
     types: attestationTypes,
@@ -76,6 +77,44 @@ export function smelterAttestation(): Attestation {
 
 /** The seeded delivery to the second buyer: the example passport on /verify. */
 export const exampleDelivery = { reference: "DN-2026-0577", tonnes: 12_000, index: 1n };
+
+/**
+ * That delivery's passport on any registry where the demo world was
+ * replayed: the sandbox, or a public testnet (scripts/deploy-testnet.ts).
+ */
+export async function examplePassport(at: {
+  chainId: number;
+  registry: Address;
+  network?: string;
+  attestation: Attestation;
+  issuedAt: number;
+}): Promise<Passport> {
+  const domain = registryDomain(at.chainId, at.registry);
+  const statementId = hashTypedData({ domain, types: attestationTypes, primaryType: "Attestation", message: at.attestation });
+  const report = commit(smelterReport, smelterSeed);
+  const keys = demoPqKeys("verifier2");
+  return buildPassport({
+    chain: at,
+    network: at.network,
+    attestation: at.attestation,
+    signature: await sign(at, "verifier2", at.attestation),
+    verifier: actors.verifier2.address,
+    statementId,
+    installation: { name: supplier.name, country: supplier.country },
+    good: { cnCode: supplier.good.cnCode, description: supplier.good.label },
+    period: { from: supplier.period.from, to: supplier.period.to },
+    allocation: {
+      id: keccak256(encodeAbiParameters([{ type: "bytes32" }, { type: "uint256" }], [statementId, exampleDelivery.index])),
+      tonnes: exampleDelivery.tonnes,
+      recipient: actors.importer2.address,
+      shipmentRef: shipmentRef(exampleDelivery.reference),
+      reference: exampleDelivery.reference,
+    },
+    disclosures: ["directKgPerTonne", "route", "period"].map((k) => disclose(report, k)),
+    issuedAt: at.issuedAt,
+    pq: { publicKey: keys.publicKey, signature: pqSign(statementId, keys.secretKey) },
+  });
+}
 
 async function seed(chain: SandboxChain) {
   const until = T0 + 2 * 365 * 86_400;
