@@ -147,7 +147,7 @@ export function Verify({ onNext }: { onNext: () => void }) {
                 </span>
               </p>
               <p className="num ml-6 text-xs text-ink-2">{c.value ?? c.detail}</p>
-              {c.status !== "pass" && <p className="ml-6 mt-1 text-xs text-ink-2">{c.detail}</p>}
+              {c.status !== "pass" && c.value && <p className="ml-6 mt-1 text-xs text-ink-2">{c.detail}</p>}
             </li>
           ))}
         </ul>
