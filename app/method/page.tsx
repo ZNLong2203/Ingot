@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { ReactNode } from "react";
+import { Icon, type IconName } from "@/components/ui/Icon";
+import { IconDot, More } from "@/components/ui/Kit";
 import { ranges } from "@/lib/cbam/checks";
 import { factors } from "@/lib/cbam/factors";
 import { benchmarks, cbamFactor, certificatePrices, sources, turkeyDefaults } from "@/lib/cbam/rules";
@@ -10,249 +13,356 @@ export const metadata: Metadata = {
   description: "How Ingot calculates CBAM embedded emissions, which factors and benchmarks it uses and where they come from, what the contract guarantees, and what it does not.",
 };
 
-const H2 = ({ children, id }: { children: React.ReactNode; id: string }) => (
-  <h2 id={id} className="mt-12 scroll-mt-20 font-display text-2xl font-bold tracking-tight">
-    {children}
-  </h2>
-);
+function Section({ id, icon, tone, title, lead, children }: { id: string; icon: IconName; tone: "mill" | "engine" | "verifier" | "importer" | "chain" | "molten" | "verified" | "refused"; title: string; lead?: ReactNode; children: ReactNode }) {
+  return (
+    <section id={id} className="scroll-mt-20 pt-14">
+      <div className="flex items-start gap-3">
+        <IconDot icon={icon} tone={tone} size="lg" />
+        <div>
+          <h2 className="font-display text-2xl font-bold tracking-tight">{title}</h2>
+          {lead && <p className="mt-1 max-w-2xl text-ink-2">{lead}</p>}
+        </div>
+      </div>
+      <div className="mt-6">{children}</div>
+    </section>
+  );
+}
+
+const eaf = [
+  { name: "Steel scrap", f: "0.04", sign: "+", note: "carbon in" },
+  { name: "Pig iron", f: "0.15", sign: "+", note: "carbon in" },
+  { name: "Graphite electrodes", f: "3.00", sign: "+", note: "carbon in" },
+  { name: "Charge carbon", f: "3.04", sign: "+", note: "carbon in" },
+  { name: "Raw dolomite", f: "0.477", sign: "+", note: "decomposition" },
+  { name: "Crude steel", f: "0.04", sign: "−", note: "carbon out" },
+];
+
+const guarantees: { title: string; error: string; body: string; icon: IconName }[] = [
+  { title: "Accredited signatures", error: "NotAccreditedVerifier", body: "Any field changed after signing breaks the EIP-712 signature.", icon: "stamp" },
+  { title: "Verified once", error: "PeriodOverlaps", body: "No overlapping periods per installation and product.", icon: "layers" },
+  { title: "Sold once", error: "ExceedsVerifiedQuantity", body: "Allocations never pass the verified tonnes; one per customs reference.", icon: "ship" },
+  { title: "Ends once", error: "AllocationNotOpen", body: "Declared or consumed downstream, never both, never twice.", icon: "check" },
+  { title: "No laundering", error: "BelowPrecursorEmissions", body: "Precursor carbon recomputed on chain; the product cannot carry less.", icon: "flame" },
+  { title: "Private by default", error: "verifyDisclosure", body: "Only a salted Merkle root on chain; fields proven one at a time.", icon: "lock" },
+];
+
+const years = Object.entries(cbamFactor);
 
 export default function MethodPage() {
   return (
-    <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-      <p className="text-xs font-medium uppercase tracking-wider text-muted">Method &amp; limits</p>
-      <h1 className="font-display text-3xl font-bold tracking-tight">How the numbers are made, and what they cannot tell you</h1>
-      <nav className="mt-6 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-2">
-        {[
-          ["calculation", "Calculation"],
-          ["factors", "Factors"],
-          ["obligation", "CBAM obligation"],
-          ["ledger", "Ledger rules"],
-          ["ai", "AI"],
-          ["security", "Security"],
-          ["limits", "Limits"],
-        ].map(([id, label]) => (
-          <a key={id} href={`#${id}`} className="underline decoration-line-strong underline-offset-4 hover:text-ink">
-            {label}
-          </a>
-        ))}
-      </nav>
+    <main className="mx-auto max-w-5xl px-4 pb-10 sm:px-6">
+      <header className="bg-hero -mx-4 border-b border-line px-4 pb-10 pt-12 sm:-mx-6 sm:px-6">
+        <p className="text-xs font-semibold uppercase tracking-wider text-chain">Method &amp; limits</p>
+        <h1 className="mt-2 max-w-3xl font-display text-4xl font-extrabold tracking-tight">
+          How the numbers are made, and <span className="text-gradient">what they cannot tell you</span>
+        </h1>
+        <nav className="mt-6 flex flex-wrap gap-2 text-sm">
+          {[
+            ["calculation", "Calculation", "calc"],
+            ["factors", "Factors", "layers"],
+            ["obligation", "CBAM cost", "coins"],
+            ["ledger", "Contract rules", "shieldCheck"],
+            ["ai", "AI & security", "spark"],
+            ["limits", "Limits", "info"],
+          ].map(([id, label, icon]) => (
+            <a key={id} href={`#${id}`} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-card px-3 py-1.5 font-medium text-ink-2 hover:border-line-strong hover:text-ink">
+              <Icon name={icon as IconName} className="h-4 w-4" /> {label}
+            </a>
+          ))}
+        </nav>
+      </header>
 
-      <H2 id="calculation">Calculation</H2>
-      <p className="mt-3 text-ink-2">
-        Ingot follows the definitive-period methodology, Commission Implementing Regulation (EU) 2025/2547, for a scrap-based electric arc
-        furnace (EAF) with a hot strip mill. Two production processes are modelled, as the regulation requires for complex goods:
-      </p>
-      <pre className="mt-4 overflow-x-auto rounded-lg border border-line bg-card p-4 font-mono text-xs leading-relaxed">{`EAF steelmaking (crude steel, CN 7207)
-  AttrEm  = Σ carbon in − Σ carbon out          carbon mass balance, Annex I 3.15.2.2
-          = scrap×0.04 + pig iron×0.15 + electrodes×3.00 + charge carbon×3.04
-            − crude steel×0.04 + raw dolomite×0.477
-  EE      = AttrEm + Σ M_i × SEE_i              precursors: verified pig iron, read from the ledger
-  SEE     = EE / AL(crude steel)
-
-Hot rolling (hot-rolled coil, CN 7208 39 00)
-  AttrEm  = gas × NCV × 56.1 t CO2/TJ × OF(1)    combustion, Annex II B.3.1.1
-  EE      = AttrEm + M(crude steel) × SEE(crude steel)
-  SEE     = EE / AL(coil)                        direct only counts for iron and steel`}</pre>
-      <p className="mt-3 text-sm text-ink-2">
-        Gas invoices in Türkiye state standard cubic metres (15 °C) and the gross calorific value; net energy is taken as 90 % of gross. Grid
-        electricity is converted to indirect emissions and reported, but for iron and steel only direct emissions count towards the obligation
-        (Annex II of Regulation (EU) 2023/956). The demo mill&apos;s result is 0.354 t CO2e per tonne of coil, of which 0.201 comes with the pig
-        iron.
-      </p>
-
-      <H2 id="factors">Factors, defaults and benchmarks</H2>
-      <div className="mt-4 overflow-x-auto rounded-lg border border-line bg-card">
-        <table className="w-full text-sm">
-          <thead className="text-left text-xs text-muted">
-            <tr>
-              <th className="px-4 py-2 font-medium">Factor</th>
-              <th className="px-4 py-2 text-right font-medium">Value</th>
-              <th className="px-4 py-2 font-medium">Source</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(factors).map(([k, f]) => (
-              <tr key={k} className="border-t border-line align-top">
-                <td className="px-4 py-2 font-mono text-xs">{k}</td>
-                <td className="num px-4 py-2 text-right">
-                  {Number(f.value.toFixed(6))} <span className="text-xs text-muted">{f.unit}</span>
-                </td>
-                <td className="px-4 py-2 text-xs text-ink-2">
-                  {"url" in f && f.url ? (
-                    <a className="underline" href={f.url}>
-                      {f.source}
-                    </a>
-                  ) : (
-                    f.source
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <div className="rounded-lg border border-line bg-card p-4 text-sm">
-          <h3 className="font-semibold">Default values for Türkiye (before mark-up)</h3>
-          <ul className="mt-2 space-y-1 text-ink-2">
-            {Object.entries(turkeyDefaults).map(([cn, d]) => (
-              <li key={cn} className="flex justify-between gap-3">
-                <span>
-                  CN {cn} {d.label}
+      <Section id="calculation" icon="calc" tone="engine" title="Calculation" lead="Two production processes, exactly as Implementing Regulation (EU) 2025/2547 asks for complex goods.">
+        <div className="grid gap-4 md:grid-cols-2">
+          <article className="card overflow-hidden">
+            <div className="flex items-center justify-between bg-mill-soft px-4 py-3">
+              <h3 className="font-semibold text-mill">1 · EAF steelmaking</h3>
+              <span className="text-xs font-medium text-ink-2">carbon mass balance</span>
+            </div>
+            <ul className="divide-y divide-line text-sm">
+              {eaf.map((x) => (
+                <li key={x.name} className="flex items-center justify-between px-4 py-2">
+                  <span className="flex items-center gap-2">
+                    <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold ${x.sign === "+" ? "bg-molten-soft text-molten" : "bg-verified-soft text-verified"}`}>{x.sign}</span>
+                    {x.name}
+                    <span className="text-xs text-muted">{x.note}</span>
+                  </span>
+                  <span className="num font-mono text-xs font-semibold">× {x.f}</span>
+                </li>
+              ))}
+              <li className="flex items-center justify-between bg-chain-soft/60 px-4 py-2">
+                <span className="flex items-center gap-2">
+                  <Icon name="chain" className="h-4 w-4 text-chain" /> Verified pig iron, from the ledger
                 </span>
-                <span className="num">{d.value.toFixed(3)}</span>
+                <span className="num font-mono text-xs font-semibold">× 1.91</span>
               </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-xs text-muted">
-            Mark-up +10 % in 2026, +20 % in 2027, +30 % from 2028.{" "}
-            <a className="underline" href={sources.defaults.url}>
-              {sources.defaults.label}
-            </a>
-          </p>
+            </ul>
+          </article>
+          <article className="card overflow-hidden">
+            <div className="flex items-center justify-between bg-engine-soft px-4 py-3">
+              <h3 className="font-semibold text-engine">2 · Hot rolling</h3>
+              <span className="text-xs font-medium text-ink-2">combustion</span>
+            </div>
+            <div className="space-y-3 p-4 text-sm">
+              <p className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
+                {["gas Sm³", "× 9,155 kcal", "× 0.9 NCV", "× 56.1 t/TJ"].map((t) => (
+                  <span key={t} className="rounded-md bg-paper-2 px-2 py-1">
+                    {t}
+                  </span>
+                ))}
+              </p>
+              <p className="flex items-center gap-2">
+                <Icon name="layers" className="h-4 w-4 text-engine" /> plus crude steel from step 1 as the internal precursor
+              </p>
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <div className="rounded-xl bg-verified-soft p-3">
+                  <p className="text-[11px] font-semibold uppercase text-verified">Demo mill</p>
+                  <p className="num font-display text-2xl font-extrabold text-verified">0.354</p>
+                  <p className="text-xs text-ink-2">t CO2e / t coil</p>
+                </div>
+                <div className="rounded-xl bg-chain-soft p-3">
+                  <p className="text-[11px] font-semibold uppercase text-chain">of which pig iron</p>
+                  <p className="num font-display text-2xl font-extrabold text-chain">0.201</p>
+                  <p className="text-xs text-ink-2">carried from upstream</p>
+                </div>
+              </div>
+              <p className="text-xs text-muted">Indirect (grid) emissions are reported but not charged for iron and steel (Annex II, Reg. 2023/956).</p>
+            </div>
+          </article>
         </div>
-        <div className="rounded-lg border border-line bg-card p-4 text-sm">
-          <h3 className="font-semibold">Benchmarks for the free allocation adjustment</h3>
-          <ul className="mt-2 space-y-1 text-ink-2">
-            <li className="flex justify-between gap-3">
-              <span>CN 7208, column A (actual data)</span>
-              <span className="num">{benchmarks.hotRolled.columnA}</span>
-            </li>
-            <li className="flex justify-between gap-3">
-              <span>CN 7208, column B (default), routes C / D / E</span>
-              <span className="num">
-                {benchmarks.hotRolled.columnB.C} / {benchmarks.hotRolled.columnB.D} / {benchmarks.hotRolled.columnB.E}
-              </span>
-            </li>
-            <li className="flex justify-between gap-3">
-              <span>CN 7207 crude steel, column A, route E</span>
-              <span className="num">{benchmarks.crudeSteel.columnA.E}</span>
-            </li>
-            <li className="flex justify-between gap-3">
-              <span>CN 7201 pig iron, column A</span>
-              <span className="num">{benchmarks.pigIron.columnA}</span>
-            </li>
-          </ul>
-          <p className="mt-2 text-xs text-muted">
-            <a className="underline" href={sources.benchmarks.url}>
-              {sources.benchmarks.label}
-            </a>
-            . The 2026 values are provisional until the EU ETS 2026–2030 benchmarks are final.
-          </p>
+        <div className="mt-4">
+          <More label="Show the equations">
+            <pre className="overflow-x-auto rounded-lg bg-paper-2 p-3 font-mono text-xs leading-relaxed">{`EAF        AttrEm = Σ carbon in − Σ carbon out (+ carbonates)    Annex I 3.15.2.2
+           EE     = AttrEm + Σ M_i × SEE_i                      verified precursors
+           SEE    = EE / AL(crude steel)
+Rolling    AttrEm = fuel × NCV × EF × OF                         Annex II B.3.1.1
+           EE     = AttrEm + M(crude steel) × SEE(crude steel)
+           SEE    = EE / AL(coil)`}</pre>
+          </More>
         </div>
-      </div>
+      </Section>
 
-      <H2 id="obligation">CBAM obligation</H2>
-      <pre className="mt-4 overflow-x-auto rounded-lg border border-line bg-card p-4 font-mono text-xs leading-relaxed">{`certificates = M × (SEE − SEFA_y) − carbon price deduction       Reg. 2023/956 Art. 6(2), 9, 31
+      <Section id="factors" icon="layers" tone="mill" title="Factors, defaults and benchmarks" lead="Every number the engine uses, with the act it comes from.">
+        <div className="card overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-paper-2 text-left text-xs text-muted">
+              <tr>
+                <th className="px-4 py-2.5 font-semibold">Factor</th>
+                <th className="px-4 py-2.5 text-right font-semibold">Value</th>
+                <th className="hidden px-4 py-2.5 font-semibold sm:table-cell">Source</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(factors).map(([k, f]) => (
+                <tr key={k} className="border-t border-line align-top">
+                  <td className="px-4 py-2 font-mono text-xs text-ink-2">{k}</td>
+                  <td className="num px-4 py-2 text-right">
+                    <b className="text-mill">{Number(f.value.toFixed(6))}</b> <span className="text-xs text-muted">{f.unit}</span>
+                  </td>
+                  <td className="hidden px-4 py-2 text-xs text-ink-2 sm:table-cell">
+                    {"url" in f && f.url ? (
+                      <a className="underline decoration-line-strong underline-offset-2" href={f.url}>
+                        {f.source}
+                      </a>
+                    ) : (
+                      f.source
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <article className="card p-4">
+            <h3 className="flex items-center gap-2 font-semibold">
+              <span className="text-xl">🇹🇷</span> Türkiye default values
+            </h3>
+            <ul className="mt-3 space-y-1.5 text-sm">
+              {Object.entries(turkeyDefaults).map(([cn, d]) => (
+                <li key={cn} className="flex justify-between gap-3">
+                  <span className="text-ink-2">
+                    <span className="font-mono text-xs text-muted">{cn}</span> {d.label}
+                  </span>
+                  <b className="num text-molten">{d.value.toFixed(3)}</b>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-xs text-muted">
+              +10 % in 2026, +20 % in 2027, +30 % from 2028 ·{" "}
+              <a className="underline" href={sources.defaults.url}>
+                Reg. 2025/2621
+              </a>
+            </p>
+          </article>
+          <article className="card p-4">
+            <h3 className="font-semibold">Free allocation benchmarks (CN 7208)</h3>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+              <div className="rounded-xl bg-verified-soft p-3">
+                <p className="text-[11px] font-semibold uppercase text-verified">Column A · actual data</p>
+                <p className="num font-display text-2xl font-extrabold text-verified">{benchmarks.hotRolled.columnA}</p>
+                <p className="text-xs text-ink-2">+ precursors: crude steel {benchmarks.crudeSteel.columnA.E}, pig iron {benchmarks.pigIron.columnA}</p>
+              </div>
+              <div className="rounded-xl bg-molten-soft p-3">
+                <p className="text-[11px] font-semibold uppercase text-molten">Column B · defaults</p>
+                <p className="num font-display text-2xl font-extrabold text-molten">{benchmarks.hotRolled.columnB.C}</p>
+                <p className="text-xs text-ink-2">
+                  route C (D {benchmarks.hotRolled.columnB.D}, E {benchmarks.hotRolled.columnB.E})
+                </p>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-muted">
+              <a className="underline" href={sources.benchmarks.url}>
+                Reg. 2025/2620
+              </a>
+              ; 2026 values provisional.
+            </p>
+          </article>
+        </div>
+      </Section>
 
-actual data   SEFA_coil  = CBAM_y × CSCF × BM*_coil + m_crude × SEFA_crude     Reg. 2025/2620 eq. 2, 4
-              SEFA_crude = CBAM_y × CSCF × BM*_crude + m_pig × SEFA_pig
-              SEFA_pig   = CBAM_y × CSCF × BM*_pig
-default       SEFA_coil  = CBAM_y × CSCF × BM_coil(route C)                     eq. 6`}</pre>
-      <p className="mt-3 text-sm text-ink-2">
-        CBAM factor by year:{" "}
-        {Object.entries(cbamFactor)
-          .map(([y, f]) => `${y} ${(f * 100).toFixed(1)} %`)
-          .join(" · ")}{" "}
-        (
-        <a className="underline" href={sources.cbamFactor.url}>
-          Directive 2003/87/EC Art. 10a(1a)
-        </a>
-        ). CSCF is 100 % for 2026–2030. Published certificate prices for 2026:{" "}
-        {certificatePrices.map((p) => `${p.quarter} €${p.eur}`).join(" · ")} (
-        <a className="underline" href={sources.prices.url}>
-          Commission
-        </a>
-        ). Türkiye&apos;s ETS pilot (2026–2027) allocates for free, so the demo assumes no carbon price paid at origin. No article states a floor
-        at zero; the demo floors each consignment at zero.
-      </p>
-      <p className="mt-3 text-sm text-ink-2">
-        For the demo mill in 2026 at €82.32: verified data gives 0.354 − 0.221 = 0.132 certificates per tonne (€10.90); the default gives 2.671 −
-        1.336 = 1.335 (€109.90). The difference, about €99 per tonne, is what makes verification worth paying for, and what makes every tonne of
-        CO2 the mill avoids worth money to its buyers.
-      </p>
+      <Section id="obligation" icon="coins" tone="importer" title="What the importer pays" lead="Certificates = tonnes × (embedded emissions − free allocation adjustment), floored at zero.">
+        <div className="space-y-3">
+          {[
+            { label: "Verified", tone: "verified", see: "0.354", sefa: "0.221", net: "0.132", eur: "€10.90" },
+            { label: "Default", tone: "molten", see: "2.671", sefa: "1.336", net: "1.335", eur: "€109.90" },
+          ].map((r) => (
+            <div key={r.label} className="card flex flex-wrap items-center gap-2 p-4 text-sm">
+              <span className={`w-20 font-semibold ${r.tone === "verified" ? "text-verified" : "text-molten"}`}>{r.label}</span>
+              <span className="num rounded-lg bg-paper-2 px-2.5 py-1.5 font-semibold">{r.see}</span>
+              <span className="text-muted">−</span>
+              <span className="num rounded-lg bg-paper-2 px-2.5 py-1.5">{r.sefa}</span>
+              <span className="text-muted">=</span>
+              <span className="num rounded-lg bg-paper-2 px-2.5 py-1.5 font-semibold">{r.net}</span>
+              <span className="text-muted">certificates/t × €82.32 =</span>
+              <span className={`num rounded-lg px-3 py-1.5 font-display text-lg font-extrabold ${r.tone === "verified" ? "bg-verified-soft text-verified" : "bg-molten-soft text-molten"}`}>{r.eur} / t</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-[1.4fr_1fr]">
+          <figure className="card p-4">
+            <figcaption className="text-sm font-semibold">CBAM factor: the share of free allocation still credited</figcaption>
+            <div className="mt-4 flex h-32 items-end gap-2" role="img" aria-label="CBAM factor falls from 97.5 percent in 2026 to 0 in 2034">
+              {years.map(([y, f]) => (
+                <div key={y} className="flex flex-1 flex-col items-center gap-1">
+                  <span className="num text-[10px] text-muted">{Number((f * 100).toFixed(1))}%</span>
+                  <span className="w-full rounded-t-md bg-gradient-to-t from-[var(--engine)] to-[var(--verifier)]" style={{ height: `${Math.max(f * 96, 2)}px` }} />
+                  <span className="num text-[10px] text-muted">{y.slice(2)}</span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-muted">
+              <a className="underline" href={sources.cbamFactor.url}>
+                Directive 2003/87/EC Art. 10a(1a)
+              </a>
+              . As it falls, every tonne of CO2 counts in full.
+            </p>
+          </figure>
+          <article className="card p-4 text-sm">
+            <h3 className="font-semibold">Certificate prices 2026</h3>
+            <ul className="mt-3 space-y-2">
+              {certificatePrices.map((p) => (
+                <li key={p.quarter} className="flex items-center justify-between">
+                  <span className="text-ink-2">{p.quarter}</span>
+                  <b className="num text-importer">€{p.eur}</b>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-xs text-muted">
+              <a className="underline" href={sources.prices.url}>
+                European Commission
+              </a>
+              . Türkiye&apos;s ETS pilot allocates for free, so no carbon price paid at origin is deducted.
+            </p>
+          </article>
+        </div>
+      </Section>
 
-      <H2 id="ledger">What the registry contract guarantees</H2>
-      <ul className="mt-4 space-y-2 text-sm text-ink-2">
-        <li>
-          <b className="text-ink">Accredited signatures.</b> A statement is recorded only with an EIP-712 signature from a verifier whose
-          accreditation is current. Changing any field after signing breaks the signature (<code>NotAccreditedVerifier</code>); signatures expire;
-          the domain separator binds them to one chain and one contract.
-        </li>
-        <li>
-          <b className="text-ink">Verified once.</b> Statements for one installation and CN code cannot overlap in time (<code>PeriodOverlaps</code>).
-          The same signed statement cannot be submitted twice (<code>StatementExists</code>).
-        </li>
-        <li>
-          <b className="text-ink">Sold once.</b> Allocations never exceed the verified quantity (<code>ExceedsVerifiedQuantity</code>), and one
-          customs reference carries one allocation (<code>ShipmentAlreadyAllocated</code>).
-        </li>
-        <li>
-          <b className="text-ink">Ends once.</b> An allocation is declared by its recipient or consumed by a downstream statement, never both and
-          never twice (<code>AllocationNotOpen</code>, <code>NotRecipient</code>).
-        </li>
-        <li>
-          <b className="text-ink">No laundering.</b> A downstream statement must state the precursor emissions the contract recomputes from the
-          upstream statements (<code>PrecursorEmissionsMismatch</code>), its total must not fall below them (<code>BelowPrecursorEmissions</code>),
-          and the inputs must be the ones the verifier signed (<code>InputsMismatch</code>).
-        </li>
-        <li>
-          <b className="text-ink">Withdrawal.</b> The signing verifier or the authority can withdraw a statement; its open allocations can no
-          longer be declared or consumed.
-        </li>
-        <li>
-          <b className="text-ink">Selective disclosure.</b> Only a Merkle root of the salted report fields is stored. Any field can be proven
-          against it, on chain (<code>verifyDisclosure</code>) or off chain, without revealing the others.
-        </li>
-      </ul>
-      <p className="mt-3 text-sm text-ink-2">
-        21 contract tests (Hardhat 3, node:test, viem) cover each rule, including a 60-step randomised allocation sequence; 22 unit tests cover the
-        engine, the disclosure proofs, the in-browser EVM and the full demo flow.
-      </p>
+      <Section id="ledger" icon="shieldCheck" tone="verified" title="What the contract guarantees" lead="Each rule is a custom error, covered by tests and reachable from the demo.">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {guarantees.map((g) => (
+            <article key={g.title} className="card p-4">
+              <div className="flex items-center gap-2">
+                <IconDot icon={g.icon} tone="verified" />
+                <h3 className="font-semibold">{g.title}</h3>
+              </div>
+              <p className="mt-2 text-sm text-ink-2">{g.body}</p>
+              <code className="mt-3 inline-block rounded-md bg-refused-soft px-2 py-0.5 text-[11px] font-medium text-refused">{g.error}</code>
+            </article>
+          ))}
+        </div>
+        <p className="mt-4 flex flex-wrap gap-2 text-xs">
+          {["21 contract tests", "22 unit tests", "60-step randomised allocation test", "browser walkthrough in CI-ready Playwright"].map((t) => (
+            <span key={t} className="rounded-full bg-verified-soft px-2.5 py-1 font-medium text-verified">
+              {t}
+            </span>
+          ))}
+        </p>
+      </Section>
 
-      <H2 id="ai">AI</H2>
-      <p className="mt-3 text-sm text-ink-2">
-        Claude Opus 5.5 reads each document and returns schema-checked lines, each with the verbatim text it came from. It never computes. The
-        deterministic engine does the arithmetic, and the verifier sees every quote next to every number. Uploaded files go to the model and are
-        not stored. Plausibility checks use the ranges below; they flag what deserves a second look and do not replace the site visit.
-      </p>
-      <ul className="mt-3 space-y-1 text-xs text-ink-2">
-        {Object.entries(ranges).map(([k, r]) => (
-          <li key={k}>
-            <span className="font-mono">{k}</span>: {r.min}–{r.max} {r.unit} · {r.source}
-          </li>
-        ))}
-      </ul>
+      <Section id="ai" icon="spark" tone="verifier" title="AI and security">
+        <div className="grid gap-4 md:grid-cols-2">
+          <article className="card p-4 text-sm">
+            <h3 className="flex items-center gap-2 font-semibold">
+              <Icon name="spark" className="h-4 w-4 text-mill" /> The model only reads
+            </h3>
+            <ul className="mt-2 space-y-1.5 text-ink-2">
+              <li>· Claude Opus 5.5, schema-checked output</li>
+              <li>· Every number with its verbatim source text</li>
+              <li>· No arithmetic, no judgement, files not stored</li>
+              <li>· Outliers flagged against cited EU BAT ranges</li>
+            </ul>
+            <More label="Plausibility ranges">
+              <ul className="space-y-1 text-xs">
+                {Object.entries(ranges).map(([k, r]) => (
+                  <li key={k}>
+                    <span className="font-mono">{k}</span>: {r.min}–{r.max} {r.unit} · {r.source}
+                  </li>
+                ))}
+              </ul>
+            </More>
+          </article>
+          <article className="card p-4 text-sm">
+            <h3 className="flex items-center gap-2 font-semibold">
+              <Icon name="shield" className="h-4 w-4 text-verifier" /> Threat model
+            </h3>
+            <ul className="mt-2 space-y-1.5 text-ink-2">
+              <li>· 19 threats mapped to a control and a test</li>
+              <li>· A bribed verifier still cannot launder precursor carbon or reuse tonnes</li>
+              <li>· Verifiers are time-limited and suspendable; statements can be withdrawn</li>
+            </ul>
+            <a className="mt-3 inline-flex items-center gap-1 font-semibold text-verifier hover:underline" href={`${site.repo}/blob/main/docs/security.md`}>
+              Read docs/security.md <Icon name="arrow" />
+            </a>
+          </article>
+        </div>
+      </Section>
 
-      <H2 id="security">Security and data integrity</H2>
-      <p className="mt-3 text-sm text-ink-2">
-        The threat model, the attacker each rule stops, and what remains outside the contract&apos;s reach are in{" "}
-        <a className="underline" href={`${site.repo}/blob/main/docs/security.md`}>
-          docs/security.md
-        </a>
-        . In short: forged evidence is the verifier&apos;s to catch; a colluding verifier can still sign false own-emissions, but cannot launder
-        precursor carbon, cannot reuse tonnes and can be suspended, which voids future signatures.
-      </p>
-
-      <H2 id="limits">Limits</H2>
-      <ul className="mt-4 list-disc space-y-1.5 pl-5 text-sm text-ink-2">
-        <li>Companies, documents and quantities in the demo are fictional; they sit inside the EU BAT ranges cited above.</li>
-        <li>The demo runs the real contract on an EVM in your browser. On a public chain the verified tonnage per statement would be visible; a production deployment would use a permissioned EVM network run by chambers of industry and verifiers, with the same contract.</li>
-        <li>Ingot does not replace the accredited verifier, the site visit, or the EU CBAM Registry (whose O3CI module lets operators upload once). It adds a shared count of verified tonnes across buyers and supply-chain tiers.</li>
-        <li>Partial consumption of a precursor allocation is not modelled; a supplier splits deliveries into separate allocations instead.</li>
-        <li>The route reading of the benchmark indicators, the floor at zero and the carbon-price deduction formula are stated assumptions, marked in the code.</li>
-        <li>The model can misread a number. Every number shows its source text, the checks flag outliers, and the verifier signs only what they have checked.</li>
-      </ul>
-      <p className="mt-8 text-sm">
-        <Link href="/demo" className="underline">
-          Try the flow
-        </Link>{" "}
-        ·{" "}
-        <a href={site.repo} className="underline">
-          Source code
-        </a>
-      </p>
+      <Section id="limits" icon="info" tone="chain" title="Limits" lead="Said plainly, so nobody has to find them.">
+        <ul className="grid gap-2 text-sm md:grid-cols-2">
+          {[
+            "Companies, documents and quantities are fictional, inside the EU BAT ranges.",
+            "On a public chain, tonnage per statement is visible; production would use a permissioned EVM network.",
+            "Ingot does not replace the verifier, the site visit or the EU CBAM Registry; it adds one shared count of tonnes.",
+            "Partial use of a precursor allocation is not modelled; suppliers split deliveries instead.",
+            "The benchmark route reading, the floor at zero and the carbon-price deduction are stated assumptions.",
+            "The model can misread a number: every number shows its source, and a person signs.",
+          ].map((t) => (
+            <li key={t} className="card flex items-start gap-2 p-3">
+              <Icon name="info" className="mt-0.5 h-4 w-4 shrink-0 text-chain" />
+              <span className="text-ink-2">{t}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link href="/demo" className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-paper hover:bg-ink-2">
+            <Icon name="play" /> Try the flow
+          </Link>
+          <a href={site.repo} className="inline-flex items-center gap-2 rounded-xl border border-line-strong px-4 py-2.5 text-sm font-semibold hover:bg-paper-2">
+            Source code
+          </a>
+        </div>
+      </Section>
     </main>
   );
 }
