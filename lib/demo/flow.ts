@@ -3,6 +3,7 @@ import { actorByAddress, actors } from "@/lib/chain/actors";
 import { hashInputs, precursorEmissions, type Attestation } from "@/lib/chain/eip712";
 import type { SandboxChain } from "@/lib/chain/sandbox";
 import type { PrecursorInput, Result } from "@/lib/cbam/calculate";
+import { factors } from "@/lib/cbam/factors";
 import { commit, disclose, type Commitment } from "@/lib/crypto/disclosure";
 import { installation } from "@/lib/samples/marmara";
 import { ids, shipmentRef, unix } from "./world";
@@ -64,7 +65,7 @@ export function reportFields(r: Result, extra: Record<string, string | number> =
     chargeCarbonTCO2: Math.round(row("charge_carbon")),
     carbonatesTCO2: Math.round(row("carbonates")),
     precursorTCO2: Math.round(r.precursorDirectT),
-    gridFactor: "0.44 t CO2/MWh",
+    gridFactor: `${factors.gridEfTurkey.value} t CO2e/MWh`,
     ...extra,
   };
 }
