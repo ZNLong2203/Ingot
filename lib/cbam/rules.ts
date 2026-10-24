@@ -53,7 +53,7 @@ export type RouteIndicator = keyof typeof benchmarks.hotRolled.columnB;
 /** Default production route for Türkiye's hot-rolled flat products in the default values act. */
 export const turkeyDefaultRoute: RouteIndicator = "C";
 
-/** Carbon steel weighting factor (CSCF), 100 % for 2026–2030 (Implementing Decision (EU) 2026/1862). */
+/** Cross-sectoral correction factor (CSCF), 100 % for 2026–2030 (Implementing Decision (EU) 2026/1862). */
 export const cscf = 1;
 
 /** Share of free allocation still reflected in the CBAM obligation, by year (CSCF taken as 1). */

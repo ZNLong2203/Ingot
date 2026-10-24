@@ -76,7 +76,7 @@ export function runChecks(opts: {
       : "No two documents share a number.",
   });
 
-  const required: ActivityLine["stream"][] = ["natural_gas", "electricity", "crude_steel", "hot_rolled", "electrodes", "charge_carbon", "carbonates"];
+  const required: ActivityLine["stream"][] = ["natural_gas", "electricity", "crude_steel", "hot_rolled", "scrap", "pig_iron", "electrodes", "charge_carbon", "carbonates"];
   const gaps = required.flatMap((s) => opts.months.filter((m) => !by(s).some((l) => l.month === m)).map((m) => `${s.replace("_", " ")} ${m}`));
   checks.push({
     id: "coverage",
