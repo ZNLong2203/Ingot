@@ -10,11 +10,12 @@ import { setState, useDemo } from "@/lib/demo/store";
 import { act, getWorld, sign } from "@/lib/demo/world";
 import { describe } from "@/lib/demo/explain";
 import { installation } from "@/lib/samples/marmara";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Hash } from "@/components/ui/Hash";
 import { Icon } from "@/components/ui/Icon";
-import { Cheat } from "../Cheat";
+import { Callout } from "@/components/ui/Kit";
+import { Cheat, CheatHeader } from "../Cheat";
+import { StepIntro } from "../StepIntro";
 import { useDerived } from "../hooks";
 import { YEAR } from "./Calculate";
 
@@ -96,80 +97,101 @@ export function Verify({ onNext }: { onNext: () => void }) {
     return act("operator", "submitStatement", [a, await sign(chain, "verifier", a), signed!.precursors.map((p) => p.allocationId)]);
   }
 
-  const groups = ["Evidence", "Physics", "Ledger"] as const;
+  const passed = checks.filter((c) => c.status === "pass").length;
 
   return (
     <div className="space-y-6">
-      <p className="max-w-3xl text-sm text-ink-2">
-        {actors.verifier.name} reviews the report before signing. The checks below point at what deserves a second look; they do not
-        replace the site visit the rules require. Under CBAM a misstatement is material above 5 % of the specific embedded emissions.
-      </p>
+      <StepIntro
+        role="verifier"
+        who={`${actors.verifier.name} · accredited verifier`}
+        lead={
+          <>
+            Checks first, then <span className="text-verifier">one signature</span>. Only a fingerprint of the report goes on chain.
+          </>
+        }
+        more={
+          <p>
+            The checks compare the mill&apos;s numbers with ranges from the EU Best Available Techniques reference documents. They point at what
+            deserves a second look and do not replace the site visit the rules require. Under CBAM a misstatement is material above 5 % of the
+            specific embedded emissions.
+          </p>
+        }
+      />
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        {groups.map((g) => (
-          <section key={g} className="rounded-lg border border-line bg-card">
-            <h3 className="border-b border-line px-4 py-2.5 font-display text-sm font-semibold">{g}</h3>
-            <ul className="divide-y divide-line">
-              {checks
-                .filter((c) => c.group === g)
-                .map((c) => (
-                  <li key={c.id} className="px-4 py-2.5 text-sm">
-                    <p className="flex items-start gap-2 font-medium">
-                      <Icon name={mark[c.status].icon} className={`mt-0.5 h-4 w-4 shrink-0 ${mark[c.status].cls}`} />
-                      <span>
-                        {c.title}
-                        <span className="sr-only"> ({mark[c.status].label})</span>
-                      </span>
-                    </p>
-                    {c.value && <p className="num ml-6 text-xs text-ink">{c.value}</p>}
-                    <p className="ml-6 text-xs text-muted">{c.detail}</p>
-                    {c.range && <p className="ml-6 text-[11px] text-muted">Source: {c.range.source}</p>}
-                  </li>
-                ))}
-            </ul>
-          </section>
-        ))}
-      </div>
+      <section className="card p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-display text-sm font-semibold">Plausibility checks</h3>
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${blocking.length ? "bg-refused-soft text-refused" : "bg-verified-soft text-verified"}`}>
+            {passed} of {checks.length} pass
+          </span>
+        </div>
+        <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {checks.map((c) => (
+            <li
+              key={c.id}
+              title={c.range ? `${c.detail} Source: ${c.range.source}` : c.detail}
+              className={`rounded-xl border px-3 py-2.5 text-sm ${
+                c.status === "pass" ? "border-verified/25 bg-verified-soft/50" : c.status === "warn" ? "border-warn/30 bg-warn-soft" : "border-refused/30 bg-refused-soft"
+              }`}
+            >
+              <p className="flex items-start gap-2 font-medium">
+                <Icon name={mark[c.status].icon} className={`mt-0.5 h-4 w-4 shrink-0 ${mark[c.status].cls}`} />
+                <span>
+                  {c.title}
+                  <span className="sr-only"> ({mark[c.status].label})</span>
+                </span>
+              </p>
+              <p className="num ml-6 text-xs text-ink-2">{c.value ?? c.detail}</p>
+              {c.status !== "pass" && <p className="ml-6 mt-1 text-xs text-ink-2">{c.detail}</p>}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-2 text-xs text-muted">Hover a check for its source range.</p>
+      </section>
 
-      <section className="rounded-lg border border-line bg-card p-4">
+      <section className="card p-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="font-display text-sm font-semibold">What goes on the ledger, and what stays private</h3>
+          <h3 className="font-display text-sm font-semibold">What importers see, and what stays with the mill</h3>
           <span className="text-xs text-muted">
             evidence root <Hash value={report.root} />
           </span>
         </div>
-        <p className="mt-1 text-xs text-muted">
-          Each report field becomes a salted leaf of a Merkle tree. Only the root is signed and stored. Importers receive the fields marked
-          shared, each with a proof the contract can check; the rest never leaves the mill unless a customs officer asks.
-        </p>
-        <ul className="mt-3 grid gap-1.5 text-xs sm:grid-cols-2 lg:grid-cols-3">
-          {Object.entries(fields).map(([k, v]) => (
-            <li key={k} className="flex items-center justify-between gap-2 rounded-md bg-paper-2 px-2.5 py-1.5">
-              <span className="text-ink-2">{k}</span>
-              <span className="num flex items-center gap-1.5 font-medium">
-                {String(v)}
-                {DEFAULT_DISCLOSURES.includes(k) ? <Badge tone="chain">shared</Badge> : <Badge>private</Badge>}
-              </span>
-            </li>
-          ))}
+        <ul className="mt-3 flex flex-wrap gap-1.5 text-xs">
+          {Object.entries(fields).map(([k, v]) => {
+            const shared = DEFAULT_DISCLOSURES.includes(k);
+            return (
+              <li
+                key={k}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 ${shared ? "bg-chain-soft text-chain" : "bg-paper-2 text-muted"}`}
+              >
+                <Icon name={shared ? "eye" : "lock"} className="h-3.5 w-3.5" />
+                <span>{k}</span>
+                <b className={`num ${shared ? "" : "blur-[3px]"}`}>{String(v)}</b>
+              </li>
+            );
+          })}
         </ul>
+        <p className="mt-2 text-xs text-muted">Each field is a salted leaf of a Merkle tree; shared fields travel with proofs the contract can check.</p>
       </section>
 
-      <section className="space-y-3 rounded-lg border border-line bg-card p-4">
-        <h3 className="font-display text-sm font-semibold">Sign, then record</h3>
-        {blocking.length > 0 && <p className="text-sm text-refused">Resolve the failed checks before signing.</p>}
+      <section className="card space-y-3 border-verifier/30 p-4">
+        <h3 className="flex items-center gap-2 font-display text-sm font-semibold">
+          <Icon name="stamp" className="h-4 w-4 text-verifier" /> Sign, then record
+        </h3>
+        {blocking.length > 0 && <Callout tone="danger" title="Resolve the failed checks before signing" />}
         <div className="flex flex-wrap items-center gap-3">
-          <Button onClick={signIt} disabled={Boolean(busy) || blocking.length > 0 || Boolean(signed)} tone={signed ? "secondary" : "primary"}>
-            <Icon name="sign" /> {signed ? `Signed by ${actors.verifier.name}` : `Sign as ${actors.verifier.name} (EIP-712)`}
+          <Button onClick={signIt} disabled={Boolean(busy) || blocking.length > 0 || Boolean(signed)} tone={signed ? "done" : "verifier"}>
+            <Icon name={signed ? "check" : "sign"} /> {signed ? `Signed by ${actors.verifier.name}` : `Sign as ${actors.verifier.name} (EIP-712)`}
           </Button>
-          <Button onClick={submit} disabled={!signed || recorded || Boolean(busy)} tone={recorded ? "secondary" : "primary"}>
-            <Icon name="chain" /> {recorded ? "Recorded on the ledger" : busy === "submit" ? "Recording…" : `Record as ${actors.operator.name}`}
+          <Icon name="arrow" className="h-4 w-4 text-muted" />
+          <Button onClick={submit} disabled={!signed || recorded || Boolean(busy)} tone={recorded ? "done" : "mill"}>
+            <Icon name={recorded ? "check" : "chain"} /> {recorded ? "Recorded on the ledger" : busy === "submit" ? "Recording…" : `Record as ${actors.operator.name}`}
           </Button>
         </div>
         {signed && (
           <details className="text-xs">
-            <summary className="cursor-pointer text-ink-2">Signed typed data</summary>
-            <pre className="mt-2 max-h-72 overflow-auto rounded-md bg-paper-2 p-3 font-mono text-[11px] leading-relaxed">
+            <summary className="cursor-pointer text-ink-2 hover:text-ink">Show the signed typed data</summary>
+            <pre className="mt-2 max-h-72 overflow-auto rounded-lg bg-paper-2 p-3 font-mono text-[11px] leading-relaxed">
               {JSON.stringify(signed.attestation, (_k, v) => (typeof v === "bigint" ? v.toString() : v), 2)}
               {"\n\nsignature: "}
               {signed.signature}
@@ -177,16 +199,18 @@ export function Verify({ onNext }: { onNext: () => void }) {
           </details>
         )}
         {recorded && (
-          <p className="flex flex-wrap items-center gap-2 rounded-md bg-verified-soft px-3 py-2 text-sm text-verified">
-            <Icon name="check" /> Statement <Hash value={signed!.statementId!} /> recorded. The pig iron allocation is now consumed: its{" "}
-            {result.precursorDirectT.toLocaleString("en-US", { maximumFractionDigits: 0 })} t CO2e travel inside this coil.
-          </p>
+          <Callout tone="success" title="Statement recorded on the ledger">
+            <span className="inline-flex flex-wrap items-center gap-1">
+              <Hash value={signed!.statementId!} /> The pig iron allocation is consumed: its{" "}
+              <b>{result.precursorDirectT.toLocaleString("en-US", { maximumFractionDigits: 0 })} t CO2e</b> now travel inside this coil.
+            </span>
+          </Callout>
         )}
-        {error && <p className="text-sm text-refused">{error}</p>}
+        {error && <Callout tone="danger" title={error} />}
       </section>
 
       <section className="space-y-2">
-        <h3 className="font-display text-sm font-semibold">Try to cheat</h3>
+        <CheatHeader />
         <div className="grid gap-3 md:grid-cols-2">
           {!recorded ? (
             <>
@@ -196,12 +220,7 @@ export function Verify({ onNext }: { onNext: () => void }) {
                 run={launder}
                 disabled={!precursors.length}
               />
-              <Cheat
-                label="Edit the number after the verifier signed"
-                explain="Submit 0.250 t CO2e/t with the signature made for the real value."
-                run={tamper}
-                disabled={!signed}
-              />
+              <Cheat label="Edit the number after the verifier signed" explain="Submit 0.250 with the signature made for the real value." run={tamper} disabled={!signed} />
             </>
           ) : (
             <>
@@ -213,7 +232,7 @@ export function Verify({ onNext }: { onNext: () => void }) {
       </section>
 
       <div className="flex justify-end">
-        <Button onClick={onNext} disabled={!recorded}>
+        <Button onClick={onNext} disabled={!recorded} tone="mill">
           Ship to EU buyers <Icon name="arrow" />
         </Button>
       </div>

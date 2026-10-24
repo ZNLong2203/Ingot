@@ -10,7 +10,9 @@ import { documents, type SampleDocument } from "@/lib/samples/marmara";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
+import { Callout } from "@/components/ui/Kit";
 import { useDerived } from "../hooks";
+import { StepIntro } from "../StepIntro";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -97,31 +99,46 @@ export function Evidence({ onNext }: { onNext: () => void }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-ink-2">
-          Marmara Demo Steel collects the quarter&apos;s evidence as it arrives: Turkish gas invoices, the electricity statement, the
-          plant&apos;s production report, and the delivery note for imported pig iron. The model reads each file and quotes the line it took
-          every number from. It does no arithmetic.
-        </p>
-        <Button onClick={readAll} disabled={reading || allRead || !ai}>
-          <Icon name="spark" />
-          {allRead ? "All documents read" : reading ? "Reading…" : `Read all ${documents.length} documents`}
-        </Button>
-      </div>
+      <StepIntro
+        role="mill"
+        who="Marmara Demo Steel · the mill"
+        lead={
+          <>
+            Seven documents from the quarter. Claude reads each one and <span className="text-mill">quotes the line behind every number</span>.
+          </>
+        }
+        action={
+          <Button onClick={readAll} disabled={reading || allRead || !ai} tone={allRead ? "done" : "mill"}>
+            <Icon name="spark" />
+            {allRead ? "All documents read" : reading ? "Reading…" : `Read all ${documents.length} documents`}
+          </Button>
+        }
+        more={
+          <p>
+            Turkish gas invoices, the electricity statement, the plant&apos;s production report and the delivery note for imported pig iron.
+            The model only reads: it returns each number with the text it came from and does no arithmetic. The engine does the maths in the
+            next step.
+          </p>
+        }
+      />
 
       {ai && !ai.available && (
-        <p className="rounded-lg bg-warn-soft px-3 py-2 text-sm text-warn">
-          AI reading is not configured on this deployment, so each document shows its reference reading (the answer key the samples were
-          generated from). Run locally with <code className="font-mono text-xs">ANTHROPIC_API_KEY</code> to watch Claude read them.
+        <Callout tone="info" title="AI reading is switched off on this deployment">
+          Each document shows its reference reading instead. Run locally with <code className="font-mono text-xs">ANTHROPIC_API_KEY</code> to
+          watch Claude read them.
+        </Callout>
+      )}
+      {ai?.available && (
+        <p className="flex items-center gap-1.5 text-xs text-muted">
+          <Icon name="spark" className="h-3.5 w-3.5 text-mill" /> Reading with {ai.model}. Files are sent to the model and not stored.
         </p>
       )}
-      {ai?.available && <p className="text-xs text-muted">Reading with {ai.model}. Files are sent to the model and not stored.</p>}
 
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {documents.map((d) => {
           const run = s.runs[d.id];
           return (
-            <li key={d.id} className={`overflow-hidden rounded-lg border bg-card ${d.id.endsWith("-copy") ? "border-warn/50" : "border-line"}`}>
+            <li key={d.id} className={`card overflow-hidden ${d.id.endsWith("-copy") && run?.status === "done" ? "ring-2 ring-warn/50" : ""}`}>
               <a href={`/samples/${d.file}`} target="_blank" rel="noreferrer" className="block aspect-[4/3] overflow-hidden border-b border-line bg-white">
                 <img src={`/samples/${d.file.replace(/\.pdf$/, ".png")}`} alt={`First page of ${d.title}`} className="w-full object-cover object-top" />
               </a>
@@ -157,25 +174,24 @@ export function Evidence({ onNext }: { onNext: () => void }) {
       )}
 
       {duplicates.length > 0 && (
-        <div className="flex gap-3 rounded-lg border border-warn/40 bg-warn-soft px-4 py-3 text-sm">
-          <Icon name="warn" className="mt-0.5 h-5 w-5 shrink-0 text-warn" />
-          <div>
-            <p className="font-medium text-ink">Caught a document that was sent twice.</p>
-            {duplicates.map((d) => (
-              <p key={d.dropped} className="text-ink-2">
-                &ldquo;{d.dropped}&rdquo; carries invoice number <span className="font-mono">{d.number}</span>, already in &ldquo;{d.kept}&rdquo;. It is
-                left out, so August&apos;s gas is not counted twice.
-              </p>
-            ))}
-          </div>
-        </div>
+        <Callout tone="warn" title="Caught a document that was sent twice">
+          {duplicates.map((d) => (
+            <p key={d.dropped}>
+              &ldquo;{d.dropped}&rdquo; repeats invoice <span className="font-mono font-semibold">{d.number}</span>. Left out, so August&apos;s gas
+              is counted once.
+            </p>
+          ))}
+        </Callout>
       )}
 
       {read.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-line bg-card">
-          <div className="border-b border-line px-4 py-2.5 text-sm font-medium">
-            What was read · {lines.filter((l) => !l.excluded).length} lines counted
-            {lines.some((l) => l.excluded) && `, ${lines.filter((l) => l.excluded).length} left out`}
+        <div className="card overflow-hidden">
+          <div className="flex flex-wrap items-center gap-2 border-b border-line bg-mill-soft/50 px-4 py-2.5 text-sm font-semibold">
+            <Icon name="doc" className="h-4 w-4 text-mill" /> What was read
+            <span className="rounded-full bg-verified-soft px-2 py-0.5 text-xs text-verified">{lines.filter((l) => !l.excluded).length} lines counted</span>
+            {lines.some((l) => l.excluded) && (
+              <span className="rounded-full bg-warn-soft px-2 py-0.5 text-xs text-warn">{lines.filter((l) => l.excluded).length} left out</span>
+            )}
           </div>
           <ul className="divide-y divide-line">
             {read.map((d) => (
@@ -229,7 +245,7 @@ export function Evidence({ onNext }: { onNext: () => void }) {
       )}
 
       <div className="flex justify-end">
-        <Button onClick={onNext} disabled={!documents.every((d) => s.runs[d.id]?.status === "done")}>
+        <Button onClick={onNext} disabled={!documents.every((d) => s.runs[d.id]?.status === "done")} tone="engine">
           Calculate embedded emissions <Icon name="arrow" />
         </Button>
       </div>

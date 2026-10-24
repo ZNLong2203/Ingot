@@ -14,12 +14,14 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Hash } from "@/components/ui/Hash";
 import { Icon } from "@/components/ui/Icon";
-import { Cheat } from "../Cheat";
+import { Callout, More } from "@/components/ui/Kit";
+import { Cheat, CheatHeader } from "../Cheat";
+import { StepIntro } from "../StepIntro";
 import { useLedgerRead } from "../hooks";
 
-export const PRESETS: { recipient: Role; tonnes: number; mrn: string; city: string }[] = [
-  { recipient: "importer", tonnes: 6_000, mrn: "26TR341000EX000101", city: "Duisburg" },
-  { recipient: "importer2", tonnes: 4_500, mrn: "26TR341000EX000102", city: "Brescia" },
+export const PRESETS: { recipient: Role; tonnes: number; mrn: string; city: string; flag: string }[] = [
+  { recipient: "importer", tonnes: 6_000, mrn: "26TR341000EX000101", city: "Duisburg, Germany", flag: "🇩🇪" },
+  { recipient: "importer2", tonnes: 4_500, mrn: "26TR341000EX000102", city: "Brescia, Italy", flag: "🇮🇹" },
 ];
 
 export function passportFor(state: DemoState, chain: SandboxChain, s: Shipment): Passport | null {
@@ -89,103 +91,129 @@ export function Allocate({ onNext }: { onNext: () => void }) {
 
   return (
     <div className="space-y-6">
-      <p className="max-w-3xl text-sm text-ink-2">
-        Each shipment to an EU buyer takes its tonnes from the verified statement and gets its own passport: the verifier&apos;s signature,
-        the ledger entry, and the shared report fields with their proofs. The customs reference (MRN) can carry only one allocation.
-      </p>
+      <StepIntro
+        role="mill"
+        who="Marmara Demo Steel · shipping"
+        lead={
+          <>
+            Each shipment takes tonnes from the verified statement and gets <span className="text-mill">its own passport</span>.
+          </>
+        }
+        more={
+          <p>
+            A passport carries the verifier&apos;s signature, the ledger entry, and the shared report fields with their proofs. One customs
+            reference (MRN) can carry only one allocation, and the sum can never pass what was verified.
+          </p>
+        }
+      />
 
       {info && (
-        <section className="rounded-lg border border-line bg-card p-4">
+        <section className="card p-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
-            <span className="font-medium">Verified Q3 2026 coil</span>
+            <span className="font-semibold">Verified Q3 2026 coil</span>
             <span className="num text-ink-2">
-              {info.allocated.toLocaleString("en-US")} of {info.quantity.toLocaleString("en-US")} t allocated ·{" "}
-              {(info.quantity - info.allocated).toLocaleString("en-US")} t left
+              <b className="text-mill">{info.allocated.toLocaleString("en-US")} t</b> allocated · {(info.quantity - info.allocated).toLocaleString("en-US")} t of{" "}
+              {info.quantity.toLocaleString("en-US")} t left
             </span>
           </div>
-          <div className="mt-2 h-3 rounded-full bg-paper-2" role="img" aria-label={`${pct.toFixed(1)} percent allocated`}>
-            <div className="h-3 rounded-full bg-ink" style={{ width: `${Math.max(pct, 0.6)}%` }} />
+          <div className="mt-2 h-3.5 overflow-hidden rounded-full bg-paper-2" role="img" aria-label={`${pct.toFixed(1)} percent allocated`}>
+            <div className="h-full rounded-full bg-gradient-to-r from-[var(--mill)] to-[#f59e0b]" style={{ width: `${Math.max(pct, 0.8)}%` }} />
           </div>
         </section>
       )}
 
       <div className="grid gap-3 md:grid-cols-2">
-        {PRESETS.map((p) => (
-          <div key={p.mrn} className="flex items-center justify-between gap-3 rounded-lg border border-line bg-card p-4">
-            <div className="text-sm">
-              <p className="font-medium">
-                {p.tonnes.toLocaleString("en-US")} t to {actors[p.recipient].name}
-              </p>
-              <p className="text-xs text-muted">
-                {p.city} · MRN <span className="font-mono">{p.mrn}</span>
-              </p>
+        {PRESETS.map((p) => {
+          const done = used.has(p.mrn);
+          return (
+            <div key={p.mrn} className={`card flex items-center justify-between gap-3 p-4 ${done ? "opacity-80" : ""}`}>
+              <div className="flex items-center gap-3 text-sm">
+                <span className="text-3xl" aria-hidden="true">
+                  {p.flag}
+                </span>
+                <div>
+                  <p className="font-semibold">
+                    <span className="num text-mill">{p.tonnes.toLocaleString("en-US")} t</span> to {actors[p.recipient].name}
+                  </p>
+                  <p className="text-xs text-muted">
+                    {p.city} · MRN <span className="font-mono">{p.mrn}</span>
+                  </p>
+                </div>
+              </div>
+              <Button onClick={() => allocate(p.recipient, p.tonnes, p.mrn)} disabled={busy || done} tone={done ? "done" : "mill"}>
+                <Icon name={done ? "check" : "ship"} /> {done ? "Allocated" : "Allocate"}
+              </Button>
             </div>
-            <Button onClick={() => allocate(p.recipient, p.tonnes, p.mrn)} disabled={busy || used.has(p.mrn)} tone={used.has(p.mrn) ? "secondary" : "primary"}>
-              <Icon name="ship" /> {used.has(p.mrn) ? "Allocated" : "Allocate"}
-            </Button>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <form
-        className="flex flex-wrap items-end gap-3 rounded-lg border border-line bg-card p-4 text-sm"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const t = Number(form.tonnes);
-          if (t > 0 && form.mrn) allocate(form.recipient, t, form.mrn);
-        }}
-      >
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-muted">Buyer</span>
-          <select className="rounded-md border border-line-strong bg-card px-2 py-1.5" value={form.recipient} onChange={(e) => setForm({ ...form, recipient: e.target.value as Role })}>
-            <option value="importer">{actors.importer.name}</option>
-            <option value="importer2">{actors.importer2.name}</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-muted">Tonnes</span>
-          <input className="num w-28 rounded-md border border-line-strong bg-card px-2 py-1.5" inputMode="decimal" value={form.tonnes} onChange={(e) => setForm({ ...form, tonnes: e.target.value })} />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-muted">Customs reference (MRN)</span>
-          <input className="w-56 rounded-md border border-line-strong bg-card px-2 py-1.5 font-mono" value={form.mrn} onChange={(e) => setForm({ ...form, mrn: e.target.value })} />
-        </label>
-        <Button tone="secondary" disabled={busy}>
-          Allocate
-        </Button>
-      </form>
-      {error && <p className="rounded-md bg-refused-soft px-3 py-2 text-sm text-refused">{error}</p>}
+      <More label="Allocate a custom shipment">
+        <form
+          className="flex flex-wrap items-end gap-3 text-sm"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const t = Number(form.tonnes);
+            if (t > 0 && form.mrn) allocate(form.recipient, t, form.mrn);
+          }}
+        >
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-muted">Buyer</span>
+            <select className="rounded-lg border border-line-strong bg-card px-2 py-1.5" value={form.recipient} onChange={(e) => setForm({ ...form, recipient: e.target.value as Role })}>
+              <option value="importer">{actors.importer.name}</option>
+              <option value="importer2">{actors.importer2.name}</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-muted">Tonnes</span>
+            <input className="num w-28 rounded-lg border border-line-strong bg-card px-2 py-1.5" inputMode="decimal" value={form.tonnes} onChange={(e) => setForm({ ...form, tonnes: e.target.value })} />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-muted">Customs reference (MRN)</span>
+            <input className="w-56 rounded-lg border border-line-strong bg-card px-2 py-1.5 font-mono" value={form.mrn} onChange={(e) => setForm({ ...form, mrn: e.target.value })} />
+          </label>
+          <Button tone="secondary" disabled={busy}>
+            Allocate
+          </Button>
+        </form>
+      </More>
+      {error && <Callout tone="danger" title={error} />}
 
       {s.shipments.length > 0 && info && (
         <section className="space-y-2">
-          <h3 className="font-display text-sm font-semibold">Passports issued</h3>
+          <h3 className="flex items-center gap-2 font-display text-sm font-semibold">
+            <Icon name="shieldCheck" className="h-4 w-4 text-importer" /> Passports issued
+          </h3>
           <ul className="grid gap-3 md:grid-cols-2">
             {s.shipments.map((sh) => {
               const p = passportFor(s, info.chain, sh);
               return (
-                <li key={sh.allocationId} className="rounded-lg border border-line bg-card p-4 text-sm">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-medium">{actors[sh.recipient].name}</p>
-                      <p className="num text-xs text-muted">
-                        {sh.tonnes.toLocaleString("en-US")} t · MRN <span className="font-mono">{sh.mrn}</span>
-                      </p>
+                <li key={sh.allocationId} className="card overflow-hidden text-sm">
+                  <div className="h-1.5 bg-gradient-to-r from-[var(--mill)] via-[var(--verifier)] to-[var(--importer)]" />
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold">{actors[sh.recipient].name}</p>
+                        <p className="num text-xs text-muted">
+                          {sh.tonnes.toLocaleString("en-US")} t · MRN <span className="font-mono">{sh.mrn}</span>
+                        </p>
+                      </div>
+                      {sh.declaredAs ? <Badge tone="verified">declared</Badge> : <Badge tone="chain">open</Badge>}
                     </div>
-                    {sh.declaredAs ? <Badge tone="verified">declared</Badge> : <Badge tone="chain">open</Badge>}
+                    <p className="mt-2 text-xs text-ink-2">
+                      allocation <Hash value={sh.allocationId} />
+                    </p>
+                    {p && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <a href={`/verify#p=${encodePassport(p)}`} className="inline-flex items-center gap-1.5 rounded-lg bg-importer-soft px-2.5 py-1.5 text-xs font-semibold text-importer hover:brightness-95">
+                          <Icon name="shieldCheck" className="h-3.5 w-3.5" /> Open passport
+                        </a>
+                        <button type="button" onClick={() => download(p)} className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-medium hover:bg-paper-2">
+                          <Icon name="doc" className="h-3.5 w-3.5" /> Download JSON
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <p className="mt-2 text-xs text-ink-2">
-                    allocation <Hash value={sh.allocationId} />
-                  </p>
-                  {p && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <a href={`/verify#p=${encodePassport(p)}`} className="inline-flex items-center gap-1.5 rounded-md border border-line-strong px-2.5 py-1.5 text-xs font-medium hover:bg-paper-2">
-                        <Icon name="shield" className="h-3.5 w-3.5" /> Open passport
-                      </a>
-                      <button type="button" onClick={() => download(p)} className="inline-flex items-center gap-1.5 rounded-md border border-line-strong px-2.5 py-1.5 text-xs font-medium hover:bg-paper-2">
-                        <Icon name="doc" className="h-3.5 w-3.5" /> Download JSON
-                      </button>
-                    </div>
-                  )}
                 </li>
               );
             })}
@@ -194,10 +222,10 @@ export function Allocate({ onNext }: { onNext: () => void }) {
       )}
 
       <section className="space-y-2">
-        <h3 className="font-display text-sm font-semibold">Try to cheat</h3>
+        <CheatHeader />
         <div className="grid gap-3 md:grid-cols-2">
           <Cheat
-            label="Sell 170,000 t of the same coil as green steel to a third buyer"
+            label="Sell 170,000 t of the same coil as green steel"
             explain="More than is left in the verified statement."
             run={async () => {
               await getWorld();
@@ -205,8 +233,8 @@ export function Allocate({ onNext }: { onNext: () => void }) {
             }}
           />
           <Cheat
-            label="Put a second allocation on an MRN already used"
-            explain={`Reuse ${s.shipments[0]?.mrn ?? "the first shipment's MRN"} for 100 t to another buyer.`}
+            label="Reuse a customs reference"
+            explain={`Put 100 t more on ${s.shipments[0]?.mrn ?? "the first shipment's MRN"}.`}
             disabled={!s.shipments.length}
             run={() => act("operator", "allocate", [statementId, actors.importer2.address, 100_000n, shipmentRef(s.shipments[0].mrn)])}
           />
@@ -214,7 +242,7 @@ export function Allocate({ onNext }: { onNext: () => void }) {
       </section>
 
       <div className="flex justify-end">
-        <Button onClick={onNext} disabled={!s.shipments.length}>
+        <Button onClick={onNext} disabled={!s.shipments.length} tone="importer">
           Switch to the importer <Icon name="arrow" />
         </Button>
       </div>

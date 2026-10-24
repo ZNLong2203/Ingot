@@ -45,8 +45,8 @@ await page.getByText(/Caught a document that was sent twice/).waitFor();
 await shot("01-evidence", /Caught a document that was sent twice/);
 
 await click(/Calculate embedded emissions/);
-await page.getByText(/What the EU importer pays/).waitFor();
-await shot("02-calculate", /What the EU importer pays/);
+await page.getByText(/The EU importer saves/).waitFor();
+await shot("02-calculate", /The EU importer saves/);
 
 await click(/Hand to the verifier/);
 await page.getByText(/Sign, then record/).waitFor();
@@ -56,14 +56,14 @@ await click(/Sign as/);
 await click(/Edit the number after/);
 await page.getByText(/NotAccreditedVerifier/).first().waitFor();
 await click(/Record as/);
-await page.getByText(/recorded\. The pig iron allocation is now consumed/).waitFor();
+await page.getByText(/Statement recorded on the ledger/).waitFor();
 await shot("03-verify", /Try to cheat/);
 
 await click(/Ship to EU buyers/);
 await page.getByRole("button", { name: "Allocate", exact: true }).first().click();
 await page.getByText("Passports issued").waitFor();
 await page.getByRole("button", { name: "Allocate", exact: true }).first().click();
-await page.getByText(/10,500 of 171,200 t allocated/).waitFor();
+await page.getByText(/10,500 t/).first().waitFor();
 await click(/Sell 170,000 t/);
 await page.getByText(/ExceedsVerifiedQuantity/).first().waitFor();
 await shot("04-ship", /Passports issued/);

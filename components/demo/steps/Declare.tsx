@@ -12,7 +12,9 @@ import { installation } from "@/lib/samples/marmara";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
-import { Cheat } from "../Cheat";
+import { Callout } from "@/components/ui/Kit";
+import { Cheat, CheatHeader } from "../Cheat";
+import { StepIntro } from "../StepIntro";
 import { useLedgerRead } from "../hooks";
 import { CostBars, YEAR } from "./Calculate";
 import { passportFor } from "./Allocate";
@@ -49,63 +51,86 @@ export function Declare() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-ink-2">
-          The importer checks each passport against the ledger, without trusting the mill or anyone&apos;s spreadsheet, then surrenders it in
-          the annual CBAM declaration (due 30 September 2027 for 2026 imports).
-        </p>
-        <label className="flex items-center gap-2 text-sm">
-          <span className="text-muted">Acting as</span>
-          <select className="rounded-md border border-line-strong bg-card px-2 py-1.5" value={who} onChange={(e) => setWho(e.target.value as Role)}>
-            <option value="importer">{actors.importer.name}</option>
-            <option value="importer2">{actors.importer2.name}</option>
-          </select>
-        </label>
-      </div>
+      <StepIntro
+        role="importer"
+        who={`${actors[who].name} · EU importer`}
+        lead={
+          <>
+            Check the passport against the ledger, then <span className="text-importer">surrender it once</span> in the CBAM declaration.
+          </>
+        }
+        action={
+          <label className="flex items-center gap-2 text-sm">
+            <span className="text-muted">Acting as</span>
+            <select className="rounded-lg border border-line-strong bg-card px-2 py-1.5" value={who} onChange={(e) => setWho(e.target.value as Role)}>
+              <option value="importer">{actors.importer.name}</option>
+              <option value="importer2">{actors.importer2.name}</option>
+            </select>
+          </label>
+        }
+        more={<p>No trust in the mill or anyone&apos;s spreadsheet: signature, statement, allocation, precursors and disclosed fields are all checked against the ledger. The first annual declaration, for 2026 imports, is due on 30 September 2027.</p>}
+      />
 
-      {mine.length === 0 && <p className="text-sm text-muted">{actors[who].name} has no shipments yet.</p>}
+      {mine.length === 0 && <Callout tone="info" title={`${actors[who].name} has no shipments yet`} />}
 
       {checked?.map(({ sh, result }) => {
         const cmp = compareWithDefault({ tonnes: sh.tonnes, see, sefaActual: sefaKg / 1000, cnCode: installation.good.cnCode, year: YEAR, priceEur: latestPrice.eur });
         const allOk = result?.checks.every((c) => c.ok);
+        const passed = result?.checks.filter((c) => c.ok).length ?? 0;
         return (
-          <section key={sh.allocationId} className="space-y-4 rounded-lg border border-line bg-card p-4">
-            <header className="flex flex-wrap items-baseline justify-between gap-2">
+          <section key={sh.allocationId} className="card overflow-hidden">
+            <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-3">
               <h3 className="font-display text-sm font-semibold">
-                {sh.tonnes.toLocaleString("en-US")} t of hot-rolled coil · MRN <span className="font-mono">{sh.mrn}</span>
+                <span className="num text-importer">{sh.tonnes.toLocaleString("en-US")} t</span> hot-rolled coil · MRN <span className="font-mono">{sh.mrn}</span>
               </h3>
-              {result?.status === "declared" ? <Badge tone="verified">declared as {sh.declaredAs}</Badge> : allOk ? <Badge tone="chain">passport valid</Badge> : <Badge tone="refused">passport fails</Badge>}
+              {result?.status === "declared" ? (
+                <Badge tone="verified">declared as {sh.declaredAs}</Badge>
+              ) : allOk ? (
+                <Badge tone="chain">passport valid · {passed}/{result?.checks.length}</Badge>
+              ) : (
+                <Badge tone="refused">passport fails</Badge>
+              )}
             </header>
-            <ul className="grid gap-1.5 text-sm md:grid-cols-2">
-              {result?.checks.map((c) => (
-                <li key={c.title} className="flex items-start gap-2">
-                  <Icon name={c.ok ? "check" : "cross"} className={`mt-0.5 h-4 w-4 shrink-0 ${c.ok ? "text-verified" : "text-refused"}`} />
-                  <span>
-                    {c.title}
-                    <span className="block text-xs text-muted">{c.detail}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <div className="rounded-md bg-paper-2 p-3">
-              <CostBars fallback={cmp.fallback.eur / 1000} actual={cmp.actual.eur / 1000} unit="k€" />
-              <p className="mt-2 text-xs text-ink-2">
-                {Math.round(cmp.actual.certificates).toLocaleString("en-US")} certificates with the passport instead of{" "}
-                {Math.round(cmp.fallback.certificates).toLocaleString("en-US")} on the default
-                value: <b className="num">€{Math.round(cmp.savingEur).toLocaleString("en-US")}</b> less for this one shipment, at €{latestPrice.eur} per
-                certificate.
-              </p>
+            <div className="grid gap-0 md:grid-cols-[1.1fr_1fr]">
+              <ul className="space-y-2 p-5 text-sm">
+                {result?.checks.map((c) => (
+                  <li key={c.title} className="flex items-start gap-2" title={c.detail}>
+                    <span className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${c.ok ? "bg-verified text-white" : "bg-refused text-white"}`}>
+                      <Icon name={c.ok ? "check" : "cross"} className="h-2.5 w-2.5" />
+                    </span>
+                    <span className={c.ok ? "" : "font-semibold text-refused"}>
+                      {c.title}
+                      {!c.ok && <span className="block text-xs font-normal text-ink-2">{c.detail}</span>}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <div className="flex flex-col justify-between gap-4 border-t border-line bg-importer-soft/60 p-5 md:border-l md:border-t-0">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-importer">Saved on this shipment</p>
+                  <p className="num font-display text-4xl font-extrabold text-importer">€{Math.round(cmp.savingEur).toLocaleString("en-US")}</p>
+                  <p className="num mt-1 text-xs text-ink-2">
+                    {Math.round(cmp.actual.certificates).toLocaleString("en-US")} certificates instead of {Math.round(cmp.fallback.certificates).toLocaleString("en-US")} at €
+                    {latestPrice.eur}
+                  </p>
+                </div>
+                <CostBars fallback={cmp.fallback.eur / 1000} actual={cmp.actual.eur / 1000} unit="k€" />
+                <Button
+                  onClick={() => declare(sh.allocationId, `${who === "importer" ? "DE" : "IT"}-CBAM-2026-${sh.mrn.slice(-4)}`)}
+                  disabled={result?.status !== "open" || !allOk}
+                  tone={result?.status === "declared" ? "done" : "importer"}
+                >
+                  <Icon name="check" /> {result?.status === "declared" ? "Declared" : "Surrender in the 2026 CBAM declaration"}
+                </Button>
+              </div>
             </div>
-            <Button onClick={() => declare(sh.allocationId, `${who === "importer" ? "DE" : "IT"}-CBAM-2026-${sh.mrn.slice(-4)}`)} disabled={result?.status !== "open" || !allOk}>
-              <Icon name="check" /> {result?.status === "declared" ? "Declared" : "Surrender in the 2026 CBAM declaration"}
-            </Button>
           </section>
         );
       })}
-      {error && <p className="rounded-md bg-refused-soft px-3 py-2 text-sm text-refused">{error}</p>}
+      {error && <Callout tone="danger" title={error} />}
 
       <section className="space-y-2">
-        <h3 className="font-display text-sm font-semibold">Try to cheat</h3>
+        <CheatHeader />
         <div className="grid gap-3 md:grid-cols-2">
           <Cheat
             label="Declare the same allocation in a second declaration"
@@ -125,15 +150,14 @@ export function Declare() {
         </div>
       </section>
 
-      <section className="space-y-2 rounded-lg border border-line bg-card p-4">
-        <h3 className="font-display text-sm font-semibold">If the verifier finds a problem later</h3>
-        <p className="text-sm text-ink-2">
-          A verifier or the accreditation registry can withdraw a statement. Every passport that points at it fails at once, everywhere,
-          and its remaining tonnes can no longer be allocated or declared.
-        </p>
+      <section className="card space-y-3 p-4">
+        <h3 className="flex items-center gap-2 font-display text-sm font-semibold">
+          <Icon name="stamp" className="h-4 w-4 text-verifier" /> If the verifier finds a problem later
+        </h3>
+        <p className="text-sm text-ink-2">Withdrawing a statement makes every passport that points at it fail at once, everywhere.</p>
         <Cheat
           label="Withdraw the statement: the gas meter's calibration had expired"
-          explain="Run as the verifier. Then re-open a passport to watch it fail."
+          explain="Run as the verifier, then watch the checks above turn red."
           disabled={!s.signed?.statementId}
           run={() => act("verifier", "revokeStatement", [s.signed!.statementId!, reasonHash("Gas meter calibration expired before Q3 2026")])}
           successText="Withdrawn. The passports above now fail the “Not revoked” check."

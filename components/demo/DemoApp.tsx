@@ -5,6 +5,8 @@ import { actors } from "@/lib/chain/actors";
 import { resetDemo, setState, useDemo } from "@/lib/demo/store";
 import { resetWorld } from "@/lib/demo/world";
 import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
+import { roleStyle, type RoleKey } from "@/components/ui/roles";
 import { useChain } from "./hooks";
 import { LedgerPanel } from "./LedgerPanel";
 import { Allocate } from "./steps/Allocate";
@@ -13,12 +15,12 @@ import { Declare } from "./steps/Declare";
 import { Evidence } from "./steps/Evidence";
 import { Verify } from "./steps/Verify";
 
-const STEPS = [
-  { title: "Evidence", who: actors.operator.name, role: "Mill" },
-  { title: "Calculate", who: "Ingot engine", role: "Method" },
-  { title: "Verify & record", who: actors.verifier.name, role: "Verifier" },
-  { title: "Ship", who: actors.operator.name, role: "Mill" },
-  { title: "Declare", who: "EU importers", role: "Importer" },
+const STEPS: { title: string; who: string; role: RoleKey }[] = [
+  { title: "Evidence", who: actors.operator.name, role: "mill" },
+  { title: "Calculate", who: "Ingot engine", role: "engine" },
+  { title: "Verify & record", who: actors.verifier.name, role: "verifier" },
+  { title: "Ship", who: actors.operator.name, role: "mill" },
+  { title: "Declare", who: "EU importers", role: "importer" },
 ];
 
 export function DemoApp() {
@@ -50,7 +52,9 @@ export function DemoApp() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-muted">Guided demo · Q3 2026 · fictional companies</p>
-            <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">From a Turkish mill&apos;s invoices to an EU customs declaration</h1>
+            <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+              From a Turkish mill&apos;s invoices to an <span className="text-importer">EU customs declaration</span>
+            </h1>
           </div>
           <Button
             tone="ghost"
@@ -59,29 +63,38 @@ export function DemoApp() {
               await resetWorld();
             }}
           >
-            Start over
+            <Icon name="reset" /> Start over
           </Button>
         </div>
 
         <nav aria-label="Steps">
-          <ol className="grid grid-cols-5 gap-1.5">
+          <ol className="grid grid-cols-5 gap-2">
             {STEPS.map((st, i) => {
               const active = i === step;
+              const r = roleStyle[st.role];
               return (
                 <li key={st.title}>
                   <button
                     type="button"
                     onClick={() => go(i)}
                     aria-current={active ? "step" : undefined}
-                    className={`w-full rounded-lg border px-2.5 py-2 text-left transition-colors ${
-                      active ? "border-ink bg-card shadow-sm" : "border-line bg-paper hover:bg-paper-2"
+                    className={`group w-full rounded-xl border px-3 py-2.5 text-left transition ${
+                      active ? `${r.soft} ${r.border} shadow-sm ring-1 ring-inset ${r.border}` : "border-line bg-card hover:bg-paper-2"
                     }`}
                   >
-                    <span className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted">
-                      <span className={`inline-block h-1.5 w-1.5 rounded-full ${done[i] ? "bg-verified" : active ? "bg-molten" : "bg-line-strong"}`} />
-                      {i + 1} · {st.role}
+                    <span className="flex items-center justify-between">
+                      <span className={`inline-flex h-7 w-7 items-center justify-center rounded-lg ${active ? `${r.bg} text-white` : `${r.soft} ${r.text}`}`}>
+                        <Icon name={r.icon} className="h-4 w-4" />
+                      </span>
+                      {done[i] ? (
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-verified text-white">
+                          <Icon name="check" className="h-3 w-3" />
+                        </span>
+                      ) : (
+                        <span className="num text-xs font-semibold text-muted">{i + 1}</span>
+                      )}
                     </span>
-                    <span className="mt-0.5 block truncate text-sm font-semibold">{st.title}</span>
+                    <span className={`mt-2 block truncate text-sm font-semibold ${active ? r.text : ""}`}>{st.title}</span>
                     <span className="hidden truncate text-xs text-muted md:block">{st.who}</span>
                   </button>
                 </li>

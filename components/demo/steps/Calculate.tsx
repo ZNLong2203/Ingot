@@ -9,7 +9,9 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Hash } from "@/components/ui/Hash";
 import { Icon } from "@/components/ui/Icon";
+import { Callout, More, Stat } from "@/components/ui/Kit";
 import { useDerived } from "../hooks";
+import { StepIntro } from "../StepIntro";
 
 export const YEAR = 2026;
 
@@ -24,11 +26,11 @@ export function CostBars({ fallback, actual, unit = "€/t" }: { fallback: numbe
     <figure className="space-y-2.5" aria-label={`CBAM cost per tonne: default ${fallback.toFixed(2)}, verified ${actual.toFixed(2)} ${unit}`}>
       {bars.map((b) => (
         <div key={b.label} className="grid grid-cols-[9.5rem_1fr_5.5rem] items-center gap-3 text-sm">
-          <span className="text-ink-2">{b.label}</span>
-          <span className="h-3 rounded-full bg-paper-2">
-            <span className="block h-3 rounded-full" style={{ width: `${Math.max(2, (b.value / max) * 100)}%`, background: b.color }} />
+          <span className="font-medium text-ink-2">{b.label}</span>
+          <span className="h-4 rounded-full bg-paper-2">
+            <span className="block h-4 rounded-full" style={{ width: `${Math.max(2, (b.value / max) * 100)}%`, background: b.color }} />
           </span>
-          <span className="num text-right font-medium">
+          <span className="num text-right font-semibold">
             {b.value.toFixed(2)} {unit}
           </span>
         </div>
@@ -49,24 +51,14 @@ export function Calculate({ onNext }: { onNext: () => void }) {
     { key: "rolling", title: "Hot strip mill → hot-rolled coil (CN 7208 39 00)", output: `${fmt(result.hotRolledT)} t coil`, see: result.seeDirect },
   ] as const;
 
-  return (
-    <div className="space-y-6">
-      <p className="max-w-3xl text-sm text-ink-2">
-        The engine follows the Commission&apos;s method (Implementing Regulation (EU) 2025/2547): emissions of each source stream, then the
-        precursors that went in, divided by what came out. Crude steel from the furnace is the internal precursor of the rolled coil. The
-        pig iron&apos;s emissions are not typed in: they come from the smelter&apos;s verified statement on the ledger.
-      </p>
-
-      {result.missing.length > 0 && (
-        <p className="rounded-lg bg-refused-soft px-3 py-2 text-sm text-refused">Missing: {result.missing.join("; ")}.</p>
-      )}
-
+  const trace = (
+    <div className="space-y-4">
       {processes.map((p) => (
-        <section key={p.key} className="overflow-hidden rounded-lg border border-line bg-card">
-          <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-4 py-2.5">
+        <section key={p.key} className="card overflow-hidden">
+          <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line bg-engine-soft/50 px-4 py-2.5">
             <h3 className="font-display text-sm font-semibold">{p.title}</h3>
             <span className="text-xs text-muted">
-              {p.output} · <span className="num">{p.see.toFixed(3)}</span> t CO2e/t direct
+              {p.output} · <b className="num text-engine">{p.see.toFixed(3)}</b> t CO2e/t direct
             </span>
           </header>
           <div className="overflow-x-auto">
@@ -76,14 +68,14 @@ export function Calculate({ onNext }: { onNext: () => void }) {
                   <th className="px-4 py-2 font-medium">Source</th>
                   <th className="px-4 py-2 font-medium">Calculation</th>
                   <th className="px-4 py-2 text-right font-medium">Direct t CO2e</th>
-                  <th className="px-4 py-2 text-right font-medium">Indirect t CO2e</th>
+                  <th className="px-4 py-2 text-right font-medium">Indirect</th>
                 </tr>
               </thead>
               <tbody>
                 {result.trace
                   .filter((r) => r.process === p.key)
                   .map((r) => (
-                    <tr key={r.label} className="border-t border-line align-top">
+                    <tr key={r.label} className={`border-t border-line align-top ${r.stream === "precursor" ? "bg-chain-soft/60" : ""}`}>
                       <td className="px-4 py-2">
                         {r.label}
                         {r.stream === "precursor" && (
@@ -93,14 +85,14 @@ export function Calculate({ onNext }: { onNext: () => void }) {
                             </Badge>
                             {precursors.map((pr) => (
                               <span key={pr.allocationId}>
-                                allocation <Hash value={pr.allocationId} /> · signed by {pr.verifierName}
+                                <Hash value={pr.allocationId} /> · {pr.verifierName}
                               </span>
                             ))}
                           </span>
                         )}
                       </td>
                       <td className="px-4 py-2 font-mono text-xs text-ink-2">{r.formula}</td>
-                      <td className="num px-4 py-2 text-right">{fmt(r.directT, 1)}</td>
+                      <td className={`num px-4 py-2 text-right font-medium ${r.directT < 0 ? "text-verified" : ""}`}>{fmt(r.directT, 1)}</td>
                       <td className="num px-4 py-2 text-right text-muted">{r.indirectT ? fmt(r.indirectT, 1) : "—"}</td>
                     </tr>
                   ))}
@@ -110,7 +102,7 @@ export function Calculate({ onNext }: { onNext: () => void }) {
                     <td className="px-4 py-2 font-mono text-xs text-ink-2">
                       {fmt(result.crudeSteelT)} t × {result.eaf.seeDirect.toFixed(4)} t CO2e/t
                     </td>
-                    <td className="num px-4 py-2 text-right">{fmt(result.eaf.directT, 1)}</td>
+                    <td className="num px-4 py-2 text-right font-medium">{fmt(result.eaf.directT, 1)}</td>
                     <td className="num px-4 py-2 text-right text-muted">{fmt(result.eaf.indirectT, 1)}</td>
                   </tr>
                 )}
@@ -119,66 +111,87 @@ export function Calculate({ onNext }: { onNext: () => void }) {
           </div>
         </section>
       ))}
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <StepIntro
+        role="engine"
+        who="Ingot engine · the EU method"
+        lead={
+          <>
+            The Commission&apos;s own formulas turn those lines into <span className="text-engine">tonnes of CO2 per tonne of coil</span>. The pig
+            iron&apos;s carbon comes from the ledger, not from a form.
+          </>
+        }
+        more={
+          <p>
+            Implementing Regulation (EU) 2025/2547: a carbon mass balance for the furnace (scrap, pig iron, electrodes and charge carbon in;
+            steel out), combustion for the reheating furnace, crude steel as the internal precursor of the coil. Indirect emissions are reported
+            but, for iron and steel, only direct emissions are charged (Annex II, Reg. 2023/956). Factors and sources are on the method page.
+          </p>
+        }
+      />
+
+      {result.missing.length > 0 && <Callout tone="danger" title="Something is missing">{result.missing.join("; ")}.</Callout>}
 
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-lg border border-line bg-card p-4">
-          <p className="text-xs uppercase tracking-wide text-muted">Specific embedded emissions</p>
-          <p className="num mt-1 font-display text-3xl font-bold">{result.seeDirect.toFixed(3)}</p>
-          <p className="text-sm text-ink-2">t CO2e per tonne of coil, direct · {result.directKgPerTonne} kg/t on chain</p>
-        </div>
-        <div className="rounded-lg border border-line bg-card p-4">
-          <p className="text-xs uppercase tracking-wide text-muted">Indirect (reported, not charged)</p>
-          <p className="num mt-1 font-display text-3xl font-bold text-ink-2">{result.seeIndirect.toFixed(3)}</p>
-          <p className="text-sm text-ink-2">
-            Grid electricity at {factors.gridEfTurkey.value} t CO2/MWh. Iron and steel pay on direct emissions only (Annex II, Reg. 2023/956).
-          </p>
-        </div>
-        <div className="rounded-lg border border-line bg-card p-4">
-          <p className="text-xs uppercase tracking-wide text-muted">Default value for Türkiye, {YEAR}</p>
-          <p className="num mt-1 font-display text-3xl font-bold text-molten">{defaultSee.toFixed(3)}</p>
-          <p className="text-sm text-ink-2">
-            2.428 plus the 10 % mark-up the EU adds when there is no verified data.{" "}
-            <a className="underline" href={sources.defaults.url}>
-              Source
-            </a>
-          </p>
-        </div>
+        <Stat label="Verified, this mill" value={result.seeDirect.toFixed(3)} tone="verified" sub={`t CO2e per tonne of coil · ${result.directKgPerTonne} kg/t on chain`} />
+        <Stat label={`EU default for Türkiye, ${YEAR}`} value={<span className="line-through decoration-2">{defaultSee.toFixed(3)}</span>} tone="molten" sub="2.428 + the 10 % mark-up for missing data" />
+        <Stat label="Indirect (reported only)" value={result.seeIndirect.toFixed(3)} sub={`grid at ${factors.gridEfTurkey.value} t CO2e/MWh · not charged for steel`} />
       </div>
 
-      <section className="rounded-lg border border-line bg-card p-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="font-display text-sm font-semibold">What the EU importer pays per tonne of this coil</h3>
-          <span className="text-xs text-muted">certificate price €{latestPrice.eur} ({latestPrice.quarter}, latest published) · CBAM factor 97.5 % in {YEAR}</span>
+      <section className="card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-importer-soft px-5 py-4">
+          <div className="flex items-center gap-3">
+            <Icon name="coins" className="h-7 w-7 text-importer" />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-importer">The EU importer saves</p>
+              <p className="num font-display text-3xl font-extrabold text-importer">
+                €{cmp.savingEurPerTonne.toFixed(2)} <span className="text-base font-semibold">per tonne</span>
+              </p>
+            </div>
+          </div>
+          <p className="num text-right text-sm text-ink-2">
+            ≈ <b className="text-importer">€{(cmp.savingEur / 1e6).toFixed(1)} M</b> on this quarter&apos;s {fmt(result.hotRolledT)} t
+            <span className="block text-xs text-muted">
+              certificate €{latestPrice.eur} ({latestPrice.quarter}) · CBAM factor 97.5 %
+            </span>
+          </p>
         </div>
-        <div className="mt-4">
+        <div className="p-5">
           <CostBars fallback={cmp.fallback.eurPerTonne} actual={cmp.actual.eurPerTonne} />
+          <div className="mt-4" />
+          <More label="How the certificates are counted">
+            <p className="num text-xs">
+              Verified: {result.seeDirect.toFixed(3)} − {sefa.sefa.toFixed(3)} free allocation adjustment (column A benchmarks through crude steel
+              and pig iron) = {cmp.actual.netPerTonne.toFixed(3)} certificates/t.
+            </p>
+            <p className="num text-xs">
+              Default: {defaultSee.toFixed(3)} − {sefaDefaultCoil(YEAR).toFixed(3)} (column B, route C as the act sets for Türkiye) ={" "}
+              {cmp.fallback.netPerTonne.toFixed(3)} certificates/t.
+            </p>
+            <p className="text-xs">
+              Every 0.1 t CO2e/t the mill cuts is now worth €{(0.1 * latestPrice.eur).toFixed(2)}/t to its buyers; on default values it is worth
+              nothing.{" "}
+              <a className="underline" href={sources.defaults.url}>
+                Default values
+              </a>
+            </p>
+          </More>
         </div>
-        <dl className="mt-4 grid gap-x-6 gap-y-1 text-xs text-ink-2 sm:grid-cols-2">
-          <div>
-            <dt className="inline text-muted">Verified: </dt>
-            <dd className="inline num">
-              {result.seeDirect.toFixed(3)} − free allocation adjustment {sefa.sefa.toFixed(3)} (column A benchmarks through crude steel and pig
-              iron) = {cmp.actual.netPerTonne.toFixed(3)} certificates/t
-            </dd>
-          </div>
-          <div>
-            <dt className="inline text-muted">Default: </dt>
-            <dd className="inline num">
-              {defaultSee.toFixed(3)} − {sefaDefaultCoil(YEAR).toFixed(3)} (column B, route C as the act sets for Türkiye) ={" "}
-              {cmp.fallback.netPerTonne.toFixed(3)} certificates/t
-            </dd>
-          </div>
-        </dl>
-        <p className="mt-4 text-sm">
-          Verified data saves <b className="num">€{cmp.savingEurPerTonne.toFixed(2)}</b> per tonne, about{" "}
-          <b className="num">€{(cmp.savingEur / 1e6).toFixed(1)} million</b> on this quarter&apos;s {fmt(result.hotRolledT)} t if it all went
-          to the EU. Every 0.1 t CO2e/t the mill cuts is now worth €{(0.1 * latestPrice.eur).toFixed(2)}/t to its buyers; on default values it
-          is worth nothing.
-        </p>
       </section>
 
+      <div className="space-y-2">
+        <h3 className="flex items-center gap-2 font-display text-sm font-semibold">
+          <Icon name="calc" className="h-4 w-4 text-engine" /> Every line of the calculation
+        </h3>
+        {trace}
+      </div>
+
       <div className="flex justify-end">
-        <Button onClick={onNext} disabled={result.missing.length > 0}>
+        <Button onClick={onNext} disabled={result.missing.length > 0} tone="verifier">
           Hand to the verifier <Icon name="arrow" />
         </Button>
       </div>
