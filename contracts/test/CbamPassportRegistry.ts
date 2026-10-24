@@ -351,6 +351,27 @@ describe("CbamPassportRegistry", async function () {
       );
     });
 
+    it("refuses a product with less indirect carbon than its precursors", async function () {
+      const { registry, inputId } = await withPrecursor();
+      const a = await millAttestation(inputId, { indirectKgPerTonne: 5 });
+      await viem.assertions.revertWithCustomErrorWithArgs(
+        registry.write.submitStatement([a, await sign(registry, a), [inputId]], { account: operator.account }),
+        registry,
+        "BelowPrecursorIndirectEmissions",
+        [855_000n, PRE_INDIRECT],
+      );
+    });
+
+    it("reopens the precursors of a withdrawn statement for its correction", async function () {
+      const { registry, inputId } = await withPrecursor();
+      const millId = await submit(registry, await millAttestation(inputId), [inputId]);
+      await registry.write.revokeStatement([millId, keccak256(toHex("wrong gas meter"))], { account: verifier.account });
+      assert.equal((await registry.read.getAllocation([inputId])).status, 1); // Open again
+      const fixed = await millAttestation(inputId, { evidenceRoot: keccak256(toHex("corrected report")) });
+      await submit(registry, fixed, [inputId]);
+      assert.equal((await registry.read.getAllocation([inputId])).status, 3);
+    });
+
     it("refuses inputs swapped after the verifier signed", async function () {
       const { registry, inputId } = await withPrecursor();
       const a = await millAttestation(inputId);
@@ -398,6 +419,79 @@ describe("CbamPassportRegistry", async function () {
         "StatementIsRevoked",
         [pigId],
       );
+    });
+  });
+
+  describe("corrections", function () {
+    it("reopens every withdrawn period back to the last live statement", async function () {
+      const registry = await deploy();
+      const q1 = await submit(registry, await attestation());
+      const q2 = await submit(registry, await attestation({ periodStart: Q1_END, periodEnd: Q2_END }));
+      // Withdraw the older one first, then the latest: both quarters must reopen.
+      await registry.write.revokeStatement([q1, zeroHash], { account: verifier.account });
+      assert.equal(await registry.read.coveredUntil([MILL, HOT_ROLLED]), Q2_END);
+      await registry.write.revokeStatement([q2, zeroHash], { account: verifier.account });
+      assert.equal(await registry.read.coveredUntil([MILL, HOT_ROLLED]), Q1_START);
+      await submit(registry, await attestation({ evidenceRoot: keccak256(toHex("corrected Q1")) }));
+    });
+
+    it("hands the latest slot back to the previous live statement", async function () {
+      const registry = await deploy();
+      const q1 = await submit(registry, await attestation());
+      const q2 = await submit(registry, await attestation({ periodStart: Q1_END, periodEnd: Q2_END }));
+      await registry.write.revokeStatement([q2, zeroHash], { account: verifier.account });
+      assert.equal(await registry.read.latestStatement([MILL, HOT_ROLLED]), q1);
+      await registry.write.revokeStatement([q1, zeroHash], { account: verifier.account });
+      assert.equal(await registry.read.coveredUntil([MILL, HOT_ROLLED]), Q1_START);
+    });
+
+    it("frees a shipment reference when its statement is withdrawn", async function () {
+      const { registry, statementId } = await withStatement();
+      const ship = keccak256(toHex("26TR0001"));
+      await registry.write.allocate([statementId, importer.account.address, 1_000_000n, ship], { account: operator.account });
+      await registry.write.revokeStatement([statementId, zeroHash], { account: verifier.account });
+      const fixed = await submit(registry, await attestation({ evidenceRoot: keccak256(toHex("corrected")) }));
+      await registry.write.allocate([fixed, importer.account.address, 1_000_000n, ship], { account: operator.account });
+      assert.equal(await registry.read.allocationCount(), 2n);
+    });
+  });
+
+  describe("guards", function () {
+    it("refuses a verifier attesting an installation it operates", async function () {
+      const registry = await deploy();
+      const own = keccak256(toHex("verifier's own plant"));
+      await registry.write.registerInstallation([own, verifier.account.address, "0x5452", zeroHash], { account: verifier.account });
+      const a = await attestation({ installationId: own });
+      await viem.assertions.revertWithCustomErrorWithArgs(
+        registry.write.submitStatement([a, await sign(registry, a), []], { account: verifier.account }),
+        registry,
+        "SelfAttestation",
+        [verifier.account.address],
+      );
+    });
+
+    it("refuses a period that has not ended", async function () {
+      const registry = await deploy();
+      const end = (await now()) + 30 * DAY;
+      const a = await attestation({ periodStart: Q2_END, periodEnd: end });
+      await viem.assertions.revertWithCustomErrorWithArgs(
+        registry.write.submitStatement([a, await sign(registry, a), []], { account: operator.account }),
+        registry,
+        "FuturePeriod",
+        [end],
+      );
+    });
+
+    it("refuses an empty operator and an empty authority", async function () {
+      const registry = await deploy();
+      await viem.assertions.revertWithCustomError(
+        registry.write.registerInstallation([keccak256(toHex("x")), "0x0000000000000000000000000000000000000000", "0x5452", zeroHash], {
+          account: verifier.account,
+        }),
+        registry,
+        "ZeroAddress",
+      );
+      await viem.assertions.revertWithCustomError(registry.write.transferAuthority(["0x0000000000000000000000000000000000000000"]), registry, "ZeroAddress");
     });
   });
 

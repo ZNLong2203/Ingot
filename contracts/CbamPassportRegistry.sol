@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @title CbamPassportRegistry
 /// @notice Verified embedded-emissions statements for EU CBAM goods, and the
@@ -112,7 +113,12 @@ contract CbamPassportRegistry is EIP712 {
     mapping(bytes32 => mapping(uint32 => uint32)) public coveredUntil;
     /// @dev The statement that set `coveredUntil`, so revoking it can reopen the period.
     mapping(bytes32 => mapping(uint32 => bytes32)) public latestStatement;
-    mapping(bytes32 => bool) public shipmentUsed;
+    /// @dev The live statement before this one for the same installation and CN code.
+    mapping(bytes32 => bytes32) public previousStatement;
+    /// @dev The allocation that holds a shipment reference. A reference is free
+    /// again once that allocation's statement is withdrawn, so a corrected
+    /// statement can cover the same shipment.
+    mapping(bytes32 => bytes32) public shipmentAllocation;
 
     bytes32[] public statementIds;
     bytes32[] public allocationIds;
@@ -145,6 +151,7 @@ contract CbamPassportRegistry is EIP712 {
     );
     event Declared(bytes32 indexed allocationId, address indexed declarant, bytes32 declarationRef);
     event Consumed(bytes32 indexed allocationId, bytes32 indexed intoStatementId);
+    event Reopened(bytes32 indexed allocationId, bytes32 indexed fromStatementId);
 
     // ─── Errors ─────────────────────────────────────────────────────────────
 
@@ -162,6 +169,9 @@ contract CbamPassportRegistry is EIP712 {
     error PeriodOverlaps(uint32 periodStart, uint32 coveredUntil);
     error ZeroQuantity();
     error ZeroRecipient();
+    error ZeroAddress();
+    error SelfAttestation(address verifier);
+    error FuturePeriod(uint32 periodEnd);
     error StatementExists(bytes32 statementId);
     error StatementIsRevoked(bytes32 statementId);
     error ExceedsVerifiedQuantity(bytes32 statementId, uint64 availableKg, uint64 requestedKg);
@@ -170,6 +180,7 @@ contract CbamPassportRegistry is EIP712 {
     error InputsMismatch(bytes32 signed, bytes32 supplied);
     error PrecursorEmissionsMismatch(uint64 directKg, uint64 indirectKg, uint64 expectedDirectKg, uint64 expectedIndirectKg);
     error BelowPrecursorEmissions(uint256 totalDirectKg, uint64 precursorDirectKg);
+    error BelowPrecursorIndirectEmissions(uint256 totalIndirectKg, uint64 precursorIndirectKg);
 
     // ─── Setup ──────────────────────────────────────────────────────────────
 
@@ -184,6 +195,7 @@ contract CbamPassportRegistry is EIP712 {
     }
 
     function transferAuthority(address to) external onlyAuthority {
+        if (to == address(0)) revert ZeroAddress();
         emit AuthorityTransferred(authority, to);
         authority = to;
     }
@@ -210,6 +222,7 @@ contract CbamPassportRegistry is EIP712 {
         external
     {
         if (!isAccredited(msg.sender)) revert NotAccreditedVerifier(msg.sender);
+        if (operator == address(0)) revert ZeroAddress();
         if (installations[installationId].operator != address(0)) revert InstallationExists(installationId);
         installations[installationId] =
             Installation({operator: operator, country: country, metadataHash: metadataHash, registeredBy: msg.sender});
@@ -256,6 +269,7 @@ contract CbamPassportRegistry is EIP712 {
         if (_statements[statementId].verifier != address(0)) revert StatementExists(statementId);
         address signer = ECDSA.recover(statementId, signature);
         if (!isAccredited(signer)) revert NotAccreditedVerifier(signer);
+        if (signer == msg.sender) revert SelfAttestation(signer);
 
         _consumeInputs(a, inputs, statementId);
 
@@ -276,6 +290,7 @@ contract CbamPassportRegistry is EIP712 {
         s.attestedAt = uint40(block.timestamp);
 
         coveredUntil[a.installationId][a.cnCode] = a.periodEnd;
+        previousStatement[statementId] = latestStatement[a.installationId][a.cnCode];
         latestStatement[a.installationId][a.cnCode] = statementId;
         statementIds.push(statementId);
         _statementInputs[statementId] = inputs;
@@ -298,6 +313,8 @@ contract CbamPassportRegistry is EIP712 {
         if (msg.sender != inst.operator) revert NotOperator(a.installationId, msg.sender);
         if (block.timestamp > a.deadline) revert SignatureExpired(a.deadline);
         if (a.periodEnd <= a.periodStart) revert InvalidPeriod(a.periodStart, a.periodEnd);
+        // Only finished periods can be verified, so a far-future end cannot block the calendar.
+        if (a.periodEnd > block.timestamp) revert FuturePeriod(a.periodEnd);
         if (a.quantityKg == 0) revert ZeroQuantity();
         uint32 covered = coveredUntil[a.installationId][a.cnCode];
         if (a.periodStart < covered) revert PeriodOverlaps(a.periodStart, covered);
@@ -325,26 +342,50 @@ contract CbamPassportRegistry is EIP712 {
             emit Consumed(inputs[i], statementId);
         }
 
-        uint64 expectedDirect = uint64(directScaled / 1000);
-        uint64 expectedIndirect = uint64(indirectScaled / 1000);
+        uint64 expectedDirect = SafeCast.toUint64(directScaled / 1000);
+        uint64 expectedIndirect = SafeCast.toUint64(indirectScaled / 1000);
         if (a.precursorDirectKg != expectedDirect || a.precursorIndirectKg != expectedIndirect) {
             revert PrecursorEmissionsMismatch(a.precursorDirectKg, a.precursorIndirectKg, expectedDirect, expectedIndirect);
         }
         uint256 totalDirect = uint256(a.directKgPerTonne) * a.quantityKg / 1000;
         if (totalDirect < a.precursorDirectKg) revert BelowPrecursorEmissions(totalDirect, a.precursorDirectKg);
+        uint256 totalIndirect = uint256(a.indirectKgPerTonne) * a.quantityKg / 1000;
+        if (totalIndirect < a.precursorIndirectKg) {
+            revert BelowPrecursorIndirectEmissions(totalIndirect, a.precursorIndirectKg);
+        }
     }
 
     /// @notice The signing verifier or the authority withdraws a statement.
-    /// Its open allocations can no longer be declared or consumed. Revoking
-    /// the latest statement reopens its period for a corrected one.
+    /// Its open allocations can no longer be declared or consumed, the
+    /// precursor allocations it consumed are reopened, and its shipment
+    /// references become free. Withdrawing the latest statement reopens its
+    /// period, and the periods of any withdrawn statements just before it, for
+    /// corrected ones.
     function revokeStatement(bytes32 statementId, bytes32 reasonHash) external {
         Statement storage s = _statement(statementId);
         if (msg.sender != s.verifier && msg.sender != authority) revert NotStatementVerifier(statementId, msg.sender);
         if (s.revoked) revert StatementIsRevoked(statementId);
         s.revoked = true;
+
         if (latestStatement[s.installationId][s.cnCode] == statementId) {
-            coveredUntil[s.installationId][s.cnCode] = s.periodStart;
-            delete latestStatement[s.installationId][s.cnCode];
+            uint32 reopenFrom = s.periodStart;
+            bytes32 prev = previousStatement[statementId];
+            while (prev != bytes32(0) && _statements[prev].revoked) {
+                reopenFrom = _statements[prev].periodStart;
+                prev = previousStatement[prev];
+            }
+            coveredUntil[s.installationId][s.cnCode] = reopenFrom;
+            latestStatement[s.installationId][s.cnCode] = prev;
+        }
+
+        bytes32[] storage inputs = _statementInputs[statementId];
+        for (uint256 i = 0; i < inputs.length; i++) {
+            Allocation storage al = _allocations[inputs[i]];
+            if (al.status == AllocationStatus.Consumed && al.spentIn == statementId) {
+                al.status = AllocationStatus.Open;
+                al.spentIn = bytes32(0);
+                emit Reopened(inputs[i], statementId);
+            }
         }
         emit StatementRevoked(statementId, msg.sender, reasonHash);
     }
@@ -365,11 +406,14 @@ contract CbamPassportRegistry is EIP712 {
         if (recipient == address(0)) revert ZeroRecipient();
         uint64 available = s.quantityKg - s.allocatedKg;
         if (quantityKg > available) revert ExceedsVerifiedQuantity(statementId, available, quantityKg);
-        if (shipmentUsed[shipmentRef]) revert ShipmentAlreadyAllocated(shipmentRef);
+        bytes32 holder = shipmentAllocation[shipmentRef];
+        if (holder != bytes32(0) && !_statements[_allocations[holder].statementId].revoked) {
+            revert ShipmentAlreadyAllocated(shipmentRef);
+        }
 
         s.allocatedKg += quantityKg;
-        shipmentUsed[shipmentRef] = true;
         allocationId = keccak256(abi.encode(statementId, allocationIds.length));
+        shipmentAllocation[shipmentRef] = allocationId;
         _allocations[allocationId] = Allocation({
             statementId: statementId,
             recipient: recipient,

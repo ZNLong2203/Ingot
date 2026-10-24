@@ -50,6 +50,14 @@ export function refusal(name: string, args: readonly unknown[]): string {
       return "The verifier's signature has expired.";
     case "StatementExists":
       return "This exact signed statement was recorded before.";
+    case "BelowPrecursorIndirectEmissions":
+      return `The product would carry ${t(args[0])} CO2e of indirect emissions, less than the ${t(args[1])} in its precursors.`;
+    case "SelfAttestation":
+      return "A verifier cannot sign for an installation it operates.";
+    case "FuturePeriod":
+      return "Only finished production periods can be verified.";
+    case "ZeroAddress":
+      return "An empty address is not allowed here.";
     default:
       return name;
   }
