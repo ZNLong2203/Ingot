@@ -1,0 +1,65 @@
+# ─────────────────────────────────────────────────────────────
+#  Private — never pushed. The repo goes public; these do not.
+# ─────────────────────────────────────────────────────────────
+/private/
+*.private.md
+
+# ─── Secrets ─────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+# Hardhat keystore (encrypted deployer key)
+/contracts/.keystore/
+
+# ─── Dependencies ────────────────────────────────────────────
+/node_modules
+/.pnp
+.pnp.*
+
+# ─── Build output ────────────────────────────────────────────
+/.next/
+/out/
+/build
+/dist
+*.tsbuildinfo
+next-env.d.ts
+
+# ─── Contracts (Hardhat) ─────────────────────────────────────
+/contracts/artifacts/
+/contracts/cache/
+/contracts/types/
+/contracts/ignition/deployments/chain-31337/
+
+# ─── Test / coverage ─────────────────────────────────────────
+/coverage
+/test-results
+/playwright-report
+
+# ─── Tooling caches ──────────────────────────────────────────
+.eslintcache
+.vercel
+
+# ─── Editor / OS ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# ─── Logs ────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ─── Media working files (video edit, raw captures) ──────────
+*.mp4
+*.mov
+
+# ─── Local agent tooling (installed by CLIs, not part of the app) ───
+/.agents/
+/.claude/
+/skills-lock.json
+/CLAUDE.md
+/AGENTS.md
