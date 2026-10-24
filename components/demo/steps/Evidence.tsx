@@ -63,9 +63,9 @@ function status(run: DocRun | undefined) {
   if (run.status === "reading") return <Badge tone="chain">reading…</Badge>;
   if (run.status === "error") return <Badge tone="refused">error</Badge>;
   return (
-    <Badge tone={run.source === "ai" ? "verified" : "neutral"}>
+    <Badge tone="verified">
       <Icon name="check" className="h-3 w-3" />
-      {run.extraction?.lines.length} {run.extraction?.lines.length === 1 ? "line" : "lines"} · {run.source === "ai" ? `AI${run.ms ? ` ${(run.ms / 1000).toFixed(1)} s` : ""}` : "reference"}
+      {run.extraction?.lines.length} {run.extraction?.lines.length === 1 ? "line" : "lines"}
     </Badge>
   );
 }
