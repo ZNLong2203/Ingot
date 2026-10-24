@@ -27,7 +27,10 @@ export function TestnetCard() {
               </a>
             )}
             {d.examplePassport && (
-              <Link className="rounded-full bg-chain-soft px-2.5 py-1 font-medium text-chain hover:underline" href="/verify">
+              <Link
+                className="rounded-full bg-chain-soft px-2.5 py-1 font-medium text-chain hover:underline"
+                href={`/verify#example=${networks[d.chainId]?.slug}`}
+              >
                 Check a passport anchored here →
               </Link>
             )}

@@ -54,6 +54,12 @@ export function PassportChecker() {
     () => "",
   );
   const link = useMemo(() => {
+    // #example=sepolia opens the example passport recorded for that network.
+    const example = hash.match(/example=([a-z-]+)/);
+    if (example) {
+      const d = publicDeployments.find((x) => x.examplePassport && networks[x.chainId]?.slug === example[1]);
+      return { passport: d?.examplePassport ?? null };
+    }
     const m = hash.match(/p=([A-Za-z0-9_-]+)/);
     if (!m) return null;
     const p = decode(m[1]);
@@ -65,6 +71,11 @@ export function PassportChecker() {
   const [result, setResult] = useState<{ checks: PassportCheck[]; status: string } | null>(null);
   const [inputError, setInputError] = useState<string | null>(null);
   const error = link && !link.passport ? "The link does not contain a readable passport." : inputError;
+  const show = (p: Passport) => {
+    setInputError(null);
+    setResult(null);
+    setManual(p);
+  };
 
   useEffect(() => {
     if (!passport) return;
@@ -104,8 +115,7 @@ export function PassportChecker() {
                 try {
                   const parsed = JSON.parse(text);
                   if (!looksLikePassport(parsed)) throw new Error("shape");
-                  setManual(parsed);
-                  setInputError(null);
+                  show(parsed);
                 } catch {
                   setInputError("That is not a passport: it needs credentialSubject, proof.eip712 and anchor.");
                 }
@@ -114,11 +124,11 @@ export function PassportChecker() {
             >
               <Icon name="shield" /> Check this passport
             </Button>
-            <Button tone="secondary" onClick={async () => setManual(await sandboxExample())}>
+            <Button tone="secondary" onClick={async () => show(await sandboxExample())}>
               Load the example
             </Button>
             {publicExample?.examplePassport && (
-              <Button tone="secondary" onClick={() => setManual(publicExample.examplePassport!)}>
+              <Button tone="secondary" onClick={() => show(publicExample.examplePassport!)}>
                 <Icon name="chain" /> Example on {networks[publicExample.chainId].name}
               </Button>
             )}
@@ -245,6 +255,7 @@ export function PassportChecker() {
               onClick={() => {
                 setManual(null);
                 setResult(null);
+                setInputError(null);
                 window.location.hash = "";
               }}
             >
