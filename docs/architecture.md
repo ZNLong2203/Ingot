@@ -66,7 +66,7 @@ A shipment's passport (`lib/passport.ts`) is shaped as a W3C Verifiable Credenti
 ## Where it runs
 
 - **In the browser.** The demo deploys the compiled bytecode to an ethereumjs EVM inside the page (`lib/chain/sandbox.ts`) and replays a journal from `localStorage`, so every visitor gets a private, deterministic chain with real execution, real signatures and real reverts, and no wallet.
-- **On a public testnet.** `scripts/deploy-testnet.ts` deploys the same bytecode with viem and seeds the same world (see [deploy.md](deploy.md)).
+- **On a public testnet.** The same bytecode runs on Ethereum Sepolia at [`0x81700eed…fd95473`](https://eth-sepolia.blockscout.com/address/0x81700eedd80142d65859616101e521729fd95473), with its source verified (exact match on Sourcify). `scripts/deploy-testnet.ts` deployed it with viem and replayed the demo world there; `/verify` checks a passport anchored there by reading the registry through a public RPC node (`lib/chain/public.ts`), with the same `checkPassport` as the sandbox (see [deploy.md](deploy.md)).
 - **In production.** A permissioned EVM network (for example Hyperledger Besu) operated by chambers of industry, accreditation bodies and verifiers keeps tonnages confidential to members while preserving the same rules and the same passports.
 
 ## Stack

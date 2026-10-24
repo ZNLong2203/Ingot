@@ -8,6 +8,8 @@ Since 1 January 2026 EU importers pay for the carbon embedded in steel, aluminiu
 
 **Live demo: [ingot-six-blush.vercel.app](https://ingot-six-blush.vercel.app)** · **Video (3 min): _link added at submission_** · Try it in five minutes: open *Try the flow*, press *Read all 7 documents*, and follow the steps; the buttons marked *Try to cheat* send real transactions that the contract refuses.
 
+**On Ethereum Sepolia:** the same contract runs at [`0x81700eedd80142d65859616101e521729fd95473`](https://eth-sepolia.blockscout.com/address/0x81700eedd80142d65859616101e521729fd95473), source verified ([exact match on Sourcify](https://repo.sourcify.dev/11155111/0x81700eedd80142d65859616101e521729fd95473)). The demo was replayed there, including a [double sale the contract refused](https://eth-sepolia.blockscout.com/tx/0x91327120ce38dafdf9e444d87a143ff75fd7b15fafc0d06c0edeba5a660647ed) (`ExceedsVerifiedQuantity`), and [*Check a passport*](https://ingot-six-blush.vercel.app/verify) checks a passport against it live.
+
 ![The guided demo: Turkish gas invoices read by AI, one re-sent invoice caught and left out](docs/images/01-evidence.png)
 
 | The EU method, in code | The verifier signs; cheats are refused | The importer checks and declares |
@@ -69,13 +71,13 @@ Verifiers sign twice: EIP-712 (ECDSA) for the contract, and **ML-DSA-65 (FIPS 20
 ```bash
 npm install
 npm run dev                  # http://localhost:3000, the EVM runs in the page
-npm test                     # 28 unit tests: engine, disclosure proofs, post-quantum co-signatures, sandbox EVM, the whole demo flow
+npm test                     # 32 unit tests: engine, disclosure proofs, post-quantum co-signatures, sandbox EVM, the whole demo flow
 npm run contracts:test       # 30 contract tests (Hardhat 3, node:test, viem)
 npm run contracts:build      # compile and export the ABI and bytecode to lib/chain
 node e2e/walkthrough.ts      # click through the demo in Chrome (BASE_URL, CHROME_PATH)
 ```
 
-Optional: put `GEMINI_API_KEY` in `.env` to have Gemini read the documents (see [.env.example](.env.example)). To deploy the same contract to a public testnet, see [docs/deploy.md](docs/deploy.md).
+Optional: put `GEMINI_API_KEY` in `.env` to have Gemini read the documents (see [.env.example](.env.example)). To deploy and verify the contract on a public testnet yourself, see [docs/deploy.md](docs/deploy.md).
 
 ## Repository
 
@@ -83,7 +85,7 @@ Optional: put `GEMINI_API_KEY` in `.env` to have Gemini read the documents (see 
 |---|---|
 | `contracts/` | `CbamPassportRegistry.sol` and its tests |
 | `lib/cbam/` | Factors with sources, the calculation, the CBAM obligation, plausibility checks |
-| `lib/chain/` | The in-page EVM sandbox, EIP-712 types, demo actors, the exported ABI |
+| `lib/chain/` | The in-page EVM sandbox, the Sepolia deployment and its reader, EIP-712 types, demo actors, the exported ABI |
 | `lib/crypto/` | Salted Merkle commitments and selective disclosure |
 | `lib/ai/` | The extraction schema and the Gemini call |
 | `lib/demo/`, `components/` | The guided demo, ledger and passport pages |
@@ -92,6 +94,6 @@ Optional: put `GEMINI_API_KEY` in `.env` to have Gemini read the documents (see 
 
 ## Built with
 
-Solidity 0.8.34 and OpenZeppelin 5.6, Hardhat 3 with viem, the ethereumjs EVM in the browser, Next.js 16, React 19, Tailwind 4, zod, the Google Gen AI SDK with Gemini, Vitest and Playwright. The project was built with the help of Claude Code.
+Solidity 0.8.34 and OpenZeppelin 5.6, Hardhat 3 with viem, the ethereumjs EVM in the browser, Ethereum Sepolia with Sourcify and Blockscout, Next.js 16, React 19, Tailwind 4, zod, the Google Gen AI SDK with Gemini, Vitest and Playwright. The project was built with the help of Claude Code.
 
 MIT licence.
