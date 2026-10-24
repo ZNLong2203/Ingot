@@ -482,6 +482,18 @@ describe("CbamPassportRegistry", async function () {
       );
     });
 
+    it("binds a verifier's post-quantum key, by the authority only", async function () {
+      const registry = await deploy();
+      const keyHash = keccak256(toHex("ML-DSA-65 public key"));
+      await viem.assertions.revertWithCustomError(
+        registry.write.setVerifierPqKey([verifier.account.address, keyHash], { account: stranger.account }),
+        registry,
+        "NotAuthority",
+      );
+      await registry.write.setVerifierPqKey([verifier.account.address, keyHash]);
+      assert.equal(await registry.read.pqKeyHash([verifier.account.address]), keyHash);
+    });
+
     it("refuses an empty operator and an empty authority", async function () {
       const registry = await deploy();
       await viem.assertions.revertWithCustomError(

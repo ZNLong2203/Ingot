@@ -104,6 +104,10 @@ contract CbamPassportRegistry is EIP712 {
     address public authority;
 
     mapping(address => Verifier) public verifiers;
+    /// @dev keccak256 of each verifier's ML-DSA-65 (FIPS 204) public key. Passports
+    /// carry a post-quantum co-signature over the statement id; this binds the
+    /// key that must have made it, so the attestation survives a future break of ECDSA.
+    mapping(address => bytes32) public pqKeyHash;
     mapping(bytes32 => Installation) public installations;
     mapping(bytes32 => Statement) private _statements;
     mapping(bytes32 => Allocation) private _allocations;
@@ -128,6 +132,7 @@ contract CbamPassportRegistry is EIP712 {
     event AuthorityTransferred(address indexed from, address indexed to);
     event VerifierAccredited(address indexed verifier, string name, uint40 accreditedUntil);
     event VerifierSuspended(address indexed verifier);
+    event VerifierPqKeySet(address indexed verifier, bytes32 keyHash);
     event InstallationRegistered(
         bytes32 indexed installationId, address indexed operator, bytes2 country, address indexed registeredBy
     );
@@ -204,6 +209,12 @@ contract CbamPassportRegistry is EIP712 {
     function accreditVerifier(address verifier, string calldata name, uint40 accreditedUntil) external onlyAuthority {
         verifiers[verifier] = Verifier({name: name, accreditedUntil: accreditedUntil, suspended: false});
         emit VerifierAccredited(verifier, name, accreditedUntil);
+    }
+
+    /// @notice The authority binds a verifier's post-quantum public key (its hash).
+    function setVerifierPqKey(address verifier, bytes32 keyHash) external onlyAuthority {
+        pqKeyHash[verifier] = keyHash;
+        emit VerifierPqKeySet(verifier, keyHash);
     }
 
     function suspendVerifier(address verifier) external onlyAuthority {
