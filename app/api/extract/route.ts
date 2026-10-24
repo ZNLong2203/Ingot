@@ -21,7 +21,7 @@ function sniff(b: Buffer): string | null {
 // Best-effort limit per address, per server instance: the deployment pays
 // for every call, and anyone can reach this route.
 const WINDOW_MS = 60_000;
-const LIMIT = 12;
+const LIMIT = 40;
 const hits = new Map<string, number[]>();
 
 function limited(ip: string): boolean {
