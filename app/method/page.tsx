@@ -310,7 +310,7 @@ Rolling    AttrEm = fuel × NCV × EF × OF                         Annex II B.3
               <Icon name="spark" className="h-4 w-4 text-mill" /> The model only reads
             </h3>
             <ul className="mt-2 space-y-1.5 text-ink-2">
-              <li>· Claude Opus 5.5, schema-checked output</li>
+              <li>· Google Gemini (gemini-3.8-flash), schema-checked output</li>
               <li>· Every number with its verbatim source text</li>
               <li>· No arithmetic, no judgement, files not stored</li>
               <li>· Outliers flagged against cited EU BAT ranges</li>

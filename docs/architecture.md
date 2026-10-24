@@ -6,7 +6,7 @@ Ingot has four parts: an AI reader that turns evidence into activity data, a det
 flowchart LR
   subgraph Mill["Mill (operator)"]
     E[Invoices, meter statements,<br/>production report, delivery notes]
-    AI[AI reader<br/>Claude Opus 5.5]
+    AI[AI reader<br/>Google Gemini]
     ENG[Engine<br/>Reg. 2025/2547]
   end
   subgraph Verifier["Accredited verifier"]
@@ -29,7 +29,7 @@ flowchart LR
 
 ## Data flow
 
-1. **Evidence → activity lines.** `POST /api/extract` sends one PDF or image to Claude with a strict output schema (`lib/ai/schema.ts`). Each line names a source stream, a month, a quantity, a unit and the verbatim text it was read from. The model is told never to estimate. Duplicates are resolved by document number, preferring the copy not stamped as a re-send (`lib/demo/derive.ts`).
+1. **Evidence → activity lines.** `POST /api/extract` sends one PDF or image to Gemini with a strict response schema, then validates the answer with zod (`lib/ai/schema.ts`). Each line names a source stream, a month, a quantity, a unit and the verbatim text it was read from. The model is told never to estimate. Duplicates are resolved by document number, preferring the copy not stamped as a re-send (`lib/demo/derive.ts`).
 2. **Activity lines → specific embedded emissions.** `lib/cbam/calculate.ts` models two production processes. The EAF is a carbon mass balance (scrap, pig iron, electrodes, charge carbon in; crude steel out) plus raw carbonates; the reheating furnace is combustion (Sm3 × gross calorific value × 0.9 × 56.1 t CO2/TJ). Crude steel is the internal precursor of the coil. Purchased precursors are not typed in: `findPrecursors` reads open allocations addressed to the mill whose shipment reference equals a delivery note number, and takes their embedded emissions from the upstream statement.
 3. **Report → commitment.** The report's fields are committed to a Merkle tree of salted leaves (`lib/crypto/disclosure.ts`; leaves `keccak256(keccak256(abi.encode(salt, key, value)))`, sorted pairs as in OpenZeppelin `MerkleProof`). Salts derive from a secret seed held by the operator.
 4. **Signature → statement.** The verifier signs an EIP-712 `Attestation` (installation, CN code, period, quantity, direct and indirect kg CO2e per tonne, carbon price paid, evidence root, hash of the precursor allocation ids, the precursors' embedded emissions, deadline). The operator submits it with the precursor ids. The statement id is the EIP-712 digest, so the passport can prove its fields hash to the id on chain.
@@ -71,4 +71,4 @@ A shipment's passport (`lib/passport.ts`) is shaped as a W3C Verifiable Credenti
 
 ## Stack
 
-Next.js 16 (App Router), React 19, Tailwind 4, TypeScript, viem, `@ethereumjs/evm`, Hardhat 3, OpenZeppelin 5.6, zod, `@anthropic-ai/sdk`, Vitest, Playwright.
+Next.js 16 (App Router), React 19, Tailwind 4, TypeScript, viem, `@ethereumjs/evm`, Hardhat 3, OpenZeppelin 5.6, zod, `@google/genai`, Vitest, Playwright.

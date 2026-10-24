@@ -27,7 +27,7 @@ For the demo's mill, verified data means **0.354 t CO2e/t instead of 2.671**, an
 
 | Step | Who | What happens |
 |---|---|---|
-| 1 · Evidence | Mill | Claude reads Turkish gas invoices, the electricity statement, the production report and the pig iron delivery note. Every number comes back with the verbatim text it was read from. A re-sent invoice (same number, *KOPYA* stamp) is caught and left out. |
+| 1 · Evidence | Mill | Gemini reads Turkish gas invoices, the electricity statement, the production report and the pig iron delivery note. Every number comes back with the verbatim text it was read from. A re-sent invoice (same number, *KOPYA* stamp) is caught and left out. |
 | 2 · Calculate | Engine | The definitive-period method (Reg. (EU) 2025/2547): a carbon mass balance for the furnace, combustion for the reheating furnace, crude steel as the internal precursor, and the pig iron's embedded emissions **read from the smelter's verified statement on the ledger**, not typed in. Then the CBAM obligation with the column A benchmarks, the 2026 CBAM factor and the published certificate price, against the marked-up default. |
 | 3 · Verify & record | Verifier | Plausibility checks against the EU BAT reference documents, a Merkle root of the salted report fields, an **EIP-712 signature**, and the statement recorded on chain. The pig iron allocation it used is consumed. |
 | 4 · Ship | Mill | Each shipment takes tonnes from the statement and carries a passport: a W3C-shaped credential with the verifier's signature, the ledger anchor and the shared fields with their proofs. |
@@ -56,7 +56,7 @@ CBAM cuts emissions only if a producer's real intensity reaches the price its bu
 
 ## AI, and where it stops
 
-Claude Opus 5.5 reads documents into schema-checked lines (`lib/ai`), each with its source text. It does no arithmetic and makes no judgement: the engine calculates, the checks flag outliers against cited ranges, and the verifier signs only what they have checked. Uploaded files go to the model and are not stored; the route caps size and type and rate-limits by address. Without an API key the demo uses the documents' reference readings and says so.
+Google Gemini (gemini-3.8-flash) reads documents into schema-checked lines (`lib/ai`), each with its source text. It does no arithmetic and makes no judgement: the engine calculates, the checks flag outliers against cited ranges, and the verifier signs only what they have checked. Uploaded files go to the model and are not stored; the route caps size and type and rate-limits by address. Without an API key the demo uses the documents' reference readings and says so.
 
 ## Security and data integrity
 
@@ -73,7 +73,7 @@ npm run contracts:build      # compile and export the ABI and bytecode to lib/ch
 node e2e/walkthrough.ts      # click through the demo in Chrome (BASE_URL, CHROME_PATH)
 ```
 
-Optional: put `ANTHROPIC_API_KEY` in `.env.local` to have Claude read the documents (see [.env.example](.env.example)). To deploy the same contract to a public testnet, see [docs/deploy.md](docs/deploy.md).
+Optional: put `GEMINI_API_KEY` in `.env` to have Gemini read the documents (see [.env.example](.env.example)). To deploy the same contract to a public testnet, see [docs/deploy.md](docs/deploy.md).
 
 ## Repository
 
@@ -83,7 +83,7 @@ Optional: put `ANTHROPIC_API_KEY` in `.env.local` to have Claude read the docume
 | `lib/cbam/` | Factors with sources, the calculation, the CBAM obligation, plausibility checks |
 | `lib/chain/` | The in-page EVM sandbox, EIP-712 types, demo actors, the exported ABI |
 | `lib/crypto/` | Salted Merkle commitments and selective disclosure |
-| `lib/ai/` | The extraction schema and the Claude call |
+| `lib/ai/` | The extraction schema and the Gemini call |
 | `lib/demo/`, `components/` | The guided demo, ledger and passport pages |
 | `lib/samples/`, `public/samples/` | The fictional mill's evidence and the generator for its PDFs |
 | `docs/` | Architecture, security, impact, adoption, problem statement, testing |
@@ -94,6 +94,6 @@ The companies, documents and quantities are fictional, chosen inside the EU BAT 
 
 ## Built with
 
-Solidity 0.8.34 and OpenZeppelin 5.6, Hardhat 3 with viem, the ethereumjs EVM in the browser, Next.js 16, React 19, Tailwind 4, zod, the Anthropic SDK with Claude Opus 5.5, Vitest and Playwright. The project was built with the help of Claude Code.
+Solidity 0.8.34 and OpenZeppelin 5.6, Hardhat 3 with viem, the ethereumjs EVM in the browser, Next.js 16, React 19, Tailwind 4, zod, the Google Gen AI SDK with Gemini, Vitest and Playwright. The project was built with the help of Claude Code.
 
 MIT licence.

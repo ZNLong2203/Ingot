@@ -104,7 +104,7 @@ export function Evidence({ onNext }: { onNext: () => void }) {
         who="Marmara Demo Steel · the mill"
         lead={
           <>
-            Seven documents from the quarter. Claude reads each one and <span className="text-mill">quotes the line behind every number</span>.
+            Seven documents from the quarter. Gemini reads each one and <span className="text-mill">quotes the line behind every number</span>.
           </>
         }
         action={
@@ -124,8 +124,8 @@ export function Evidence({ onNext }: { onNext: () => void }) {
 
       {ai && !ai.available && (
         <Callout tone="info" title="AI reading is switched off on this deployment">
-          Each document shows its reference reading instead. Run locally with <code className="font-mono text-xs">ANTHROPIC_API_KEY</code> to
-          watch Claude read them.
+          Each document shows its reference reading instead. Put a <code className="font-mono text-xs">GEMINI_API_KEY</code> in{" "}
+          <code className="font-mono text-xs">.env</code> to watch Gemini read them.
         </Callout>
       )}
       {ai?.available && (

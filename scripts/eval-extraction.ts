@@ -1,6 +1,6 @@
 // Sends every sample document to a running app's /api/extract and compares
 // what the model read with the answer key the samples were generated from.
-//   npm run dev            (with ANTHROPIC_API_KEY in .env.local)
+//   npm run dev            (with GEMINI_API_KEY in .env)
 //   node scripts/eval-extraction.ts [base-url]
 import { readFile } from "node:fs/promises";
 import { documents } from "../lib/samples/marmara.ts";
@@ -9,7 +9,7 @@ const BASE = process.argv[2] ?? "http://localhost:3000";
 
 const status = await fetch(`${BASE}/api/extract`).then((r) => r.json());
 if (!status.available) {
-  console.error(`AI extraction is not configured at ${BASE} (set ANTHROPIC_API_KEY).`);
+  console.error(`AI extraction is not configured at ${BASE} (set GEMINI_API_KEY in .env).`);
   process.exit(2);
 }
 

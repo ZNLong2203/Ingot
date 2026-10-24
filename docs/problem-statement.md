@@ -14,7 +14,7 @@ Türkiye is the EU's second-largest source of CBAM goods (€10.8 bn in 2025) an
 
 **Ingot** produces a verified CBAM statement from a mill's evidence and lets each verified tonne travel to exactly one end.
 
-- **AI reading.** Claude reads invoices, meter statements, production reports and delivery notes in Turkish or English and returns each number with its source text.
+- **AI reading.** Gemini reads invoices, meter statements, production reports and delivery notes in Turkish or English and returns each number with its source text.
 - **The EU method in code.** The definitive-period methodology (Reg. 2025/2547): a carbon mass balance for the EAF, combustion for the reheating furnace, verified precursors read from the ledger, and the obligation with the 2026 benchmarks, CBAM factor and certificate price.
 - **Verification and signature.** Plausibility checks against EU BAT ranges, a salted Merkle root of the report, and an EIP-712 signature by an accredited verifier.
 - **A registry contract that keeps one count.** Verified once; sold once; ended once (declared or consumed); and no laundering: a product must carry the embedded emissions of the verified precursors it consumed, recomputed on chain.
