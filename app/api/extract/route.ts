@@ -1,6 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { ApiError } from "@google/genai";
 import { NextResponse } from "next/server";
-import { ExtractionRefused, extractDocument, extractionAvailable, MODEL } from "@/lib/ai/extract";
+import { ZodError } from "zod/v4";
+import { ExtractionBusy, ExtractionRefused, extractDocument, extractionAvailable, MODEL } from "@/lib/ai/extract";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -60,12 +61,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ result, model: MODEL, ms: Date.now() - started });
   } catch (error) {
     if (error instanceof ExtractionRefused) return NextResponse.json({ error: error.message }, { status: 422 });
-    if (error instanceof Anthropic.RateLimitError) {
-      return NextResponse.json({ error: "The model is busy; try again in a moment." }, { status: 429 });
+    if (error instanceof ExtractionBusy) return NextResponse.json({ error: error.message }, { status: 429 });
+    if (error instanceof ZodError || error instanceof SyntaxError) {
+      return NextResponse.json({ error: "The model's answer did not match the expected shape." }, { status: 502 });
     }
-    if (error instanceof Anthropic.APIError) {
-      return NextResponse.json({ error: `Model error ${error.status ?? ""}`.trim() }, { status: 502 });
-    }
+    if (error instanceof ApiError) return NextResponse.json({ error: `Model error ${error.status}` }, { status: 502 });
     console.error("extract failed", error);
     return NextResponse.json({ error: "Extraction failed." }, { status: 500 });
   }
