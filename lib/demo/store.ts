@@ -4,6 +4,8 @@ import { useSyncExternalStore } from "react";
 import type { Hex } from "viem";
 import type { Extraction } from "@/lib/ai/schema";
 import type { Role } from "@/lib/chain/actors";
+import type { Attestation } from "@/lib/chain/eip712";
+import type { LedgerPrecursor } from "./flow";
 import { deserialize, serialize } from "@/lib/json";
 
 /** What the person has done in the guided demo, kept across reloads. */
@@ -32,9 +34,11 @@ export interface Shipment {
 }
 
 export interface SignedStatement {
-  attestation: Record<string, unknown>;
+  attestation: Attestation;
   signature: Hex;
   reportSeed: Hex;
+  reportFields: Record<string, string | number>;
+  precursors: LedgerPrecursor[];
   statementId?: Hex;
 }
 

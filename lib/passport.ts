@@ -30,9 +30,24 @@ export interface Passport {
     proofPurpose: "assertionMethod";
     verificationMethod: string;
     proofValue: Hex;
-    eip712: { domain: ReturnType<typeof registryDomain>; primaryType: "Attestation"; message: Attestation };
+    eip712: { domain: ReturnType<typeof registryDomain>; primaryType: "Attestation"; message: JsonAttestation };
   };
   anchor: { network: "sandbox" | "sepolia"; chainId: number; registry: Address; statementId: Hex };
+}
+
+/** The attestation as JSON: 64-bit fields travel as decimal strings. */
+export type JsonAttestation = Omit<Attestation, "quantityKg" | "precursorDirectKg" | "precursorIndirectKg"> & {
+  quantityKg: string;
+  precursorDirectKg: string;
+  precursorIndirectKg: string;
+};
+
+export function toJson(a: Attestation): JsonAttestation {
+  return { ...a, quantityKg: a.quantityKg.toString(), precursorDirectKg: a.precursorDirectKg.toString(), precursorIndirectKg: a.precursorIndirectKg.toString() };
+}
+
+export function fromJson(a: JsonAttestation): Attestation {
+  return { ...a, quantityKg: BigInt(a.quantityKg), precursorDirectKg: BigInt(a.precursorDirectKg), precursorIndirectKg: BigInt(a.precursorIndirectKg) };
 }
 
 const did = (chainId: number, a: Address) => `did:pkh:eip155:${chainId}:${a}`;
@@ -77,7 +92,7 @@ export function buildPassport(opts: {
       proofPurpose: "assertionMethod",
       verificationMethod: `${did(chain.chainId, opts.verifier)}#blockchainAccountId`,
       proofValue: opts.signature,
-      eip712: { domain: registryDomain(chain.chainId, chain.registry), primaryType: "Attestation", message: a },
+      eip712: { domain: registryDomain(chain.chainId, chain.registry), primaryType: "Attestation", message: toJson(a) },
     },
     anchor: { network: "sandbox", chainId: chain.chainId, registry: chain.registry, statementId: opts.statementId },
   };
@@ -94,7 +109,13 @@ const STATUS = ["none", "open", "declared", "consumed"] as const;
 /** Checks a passport against the ledger it names. */
 export async function checkPassport(p: Passport, chain: SandboxChain): Promise<{ checks: PassportCheck[]; status: string }> {
   const checks: PassportCheck[] = [];
-  const { message, domain } = p.proof.eip712;
+  const { domain } = p.proof.eip712;
+  let message: Attestation;
+  try {
+    message = fromJson(p.proof.eip712.message);
+  } catch {
+    return { checks: [{ title: "Readable passport", ok: false, detail: "The signed fields are malformed." }], status: "unknown" };
+  }
   const sameChain = domain.chainId === chain.chainId && domain.verifyingContract.toLowerCase() === chain.registry.toLowerCase();
   checks.push({
     title: "Issued for this registry",
@@ -160,7 +181,7 @@ export async function checkPassport(p: Passport, chain: SandboxChain): Promise<{
       const al = await chain.read("getAllocation", [id]);
       const up = await chain.read("getStatement", [al.statementId]);
       if (up.revoked) upstreamOk = false;
-      names.push(`${Number(al.quantityKg) / 1000} t at ${up.directKgPerTonne / 1000} t CO2e/t`);
+      names.push(`${(Number(al.quantityKg) / 1000).toLocaleString("en-US")} t at ${up.directKgPerTonne / 1000} t CO2e/t`);
     }
     checks.push({
       title: "Precursors are verified and live",

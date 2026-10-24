@@ -10,6 +10,7 @@ import { ids, shipmentRef, unix } from "./world";
 /** The steps of the demo that talk to the ledger, shared by the UI and the tests. */
 
 export interface LedgerPrecursor extends PrecursorInput {
+  allocationId: Hex;
   statementId: Hex;
   quantityKg: bigint;
   verifierName: string;

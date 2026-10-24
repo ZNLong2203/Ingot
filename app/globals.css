@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+/* Ingot design tokens. Mill paper and graphite ink; one warm "molten" accent
+   for emissions, one green for what has been verified, one red for what the
+   ledger refused. Each colour means the same thing on every page. */
+:root {
+  --paper: #f5f3ee;
+  --paper-2: #ebe8e0;
+  --card: #fffdf9;
+  --ink: #16191d;
+  --ink-2: #353b42;
+  --muted: #5e656d;
+  --line: #d8d4ca;
+  --line-strong: #b9b4a8;
+
+  --molten: #c2410c;
+  --molten-soft: #fbe6d9;
+  --verified: #0f6b4f;
+  --verified-soft: #dcefe6;
+  --refused: #b42318;
+  --refused-soft: #fbe3e0;
+  --chain: #3730a3;
+  --chain-soft: #e5e4f7;
+  --warn: #8a5a00;
+  --warn-soft: #f8ecd0;
+
+  --focus: #1d4ed8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #111315;
+    --paper-2: #181b1e;
+    --card: #1b1e22;
+    --ink: #eceae4;
+    --ink-2: #c9c6be;
+    --muted: #9a9fa6;
+    --line: #2d3238;
+    --line-strong: #444a52;
+
+    --molten: #f0814a;
+    --molten-soft: #3a2116;
+    --verified: #4fc79a;
+    --verified-soft: #15302a;
+    --refused: #f2817a;
+    --refused-soft: #3a1a18;
+    --chain: #a5a2f5;
+    --chain-soft: #23224a;
+    --warn: #e5b45a;
+    --warn-soft: #33290f;
+
+    --focus: #93b4ff;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-molten: var(--molten);
+  --color-molten-soft: var(--molten-soft);
+  --color-verified: var(--verified);
+  --color-verified-soft: var(--verified-soft);
+  --color-refused: var(--refused);
+  --color-refused-soft: var(--refused-soft);
+  --color-chain: var(--chain);
+  --color-chain-soft: var(--chain-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-archivo), var(--font-inter), ui-sans-serif, sans-serif;
+  --font-mono: var(--font-mono-face), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+html {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum" 1, "cv11" 1;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: var(--molten-soft);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}

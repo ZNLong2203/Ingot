@@ -105,7 +105,7 @@ export function calculate(all: ActivityLine[], precursors: PrecursorInput[], gri
       label,
       quantity: q,
       unit: "t",
-      formula: `${sign < 0 ? "− " : ""}${fmt(q, q % 1 ? 1 : 0)} t × ${factor.value} t CO2/t`,
+      formula: `${sign < 0 ? "− " : ""}${fmt(q, q % 1 ? 1 : 0)} t × ${factor.value.toFixed(2)} t CO2/t`,
       directT: sign * q * factor.value,
       indirectT: 0,
       lineIds: ids(ls),

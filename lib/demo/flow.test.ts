@@ -73,6 +73,7 @@ describe("demo flow", async () => {
   it("catches a passport whose numbers were edited", async () => {
     const p = buildPassport(passportArgs);
     p.proof.eip712.message = { ...p.proof.eip712.message, directKgPerTonne: 120 };
+    expect(() => JSON.stringify(p)).not.toThrow();
     const { checks } = await checkPassport(p, chain);
     expect(checks.find((c) => c.title.startsWith("Statement id"))?.ok).toBe(false);
   });
