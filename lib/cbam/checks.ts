@@ -15,11 +15,14 @@ export interface Range {
 }
 
 export const ranges = {
-  electricity: { min: 350, max: 750, unit: "kWh / t crude steel (whole site)", source: "EU BAT reference document for iron and steel (2013), EAF and rolling" },
-  electrodes: { min: 0.9, max: 3.5, unit: "kg / t crude steel", source: "EU BAT reference document for iron and steel (2013), EAF" },
-  gas: { min: 0.8, max: 2.2, unit: "GJ (NCV) / t hot-rolled", source: "EU BAT reference document for iron and steel (2013), reheating furnaces" },
-  metallic: { min: 1.05, max: 1.2, unit: "t metallic charge / t crude steel", source: "Typical EAF metallic yield" },
-  yield: { min: 0.9, max: 0.995, unit: "t hot-rolled / t crude steel", source: "Typical hot strip mill yield" },
+  // EAF 248–748 kWh/t liquid steel (BREF tables 8.15 and 8.1) plus rolling 72–140 kWh/t (FMP BREF table A.3-4).
+  electricity: { min: 320, max: 890, unit: "kWh / t crude steel (whole site)", source: "EU BREF Iron & Steel 2013, tables 8.1 and 8.15; FMP BREF 2001, table A.3-4" },
+  electrodes: { min: 0.8, max: 6, unit: "kg / t crude steel", source: "EU BREF Iron & Steel 2013, tables 8.1 and 8.15" },
+  chargeCarbon: { min: 3, max: 28, unit: "kg / t crude steel", source: "EU BREF Iron & Steel 2013, table 8.1 (coal)" },
+  metallic: { min: 1.039, max: 1.232, unit: "t metallic charge / t crude steel", source: "EU BREF Iron & Steel 2013, table 8.1" },
+  stack: { min: 72, max: 180, unit: "kg CO2 / t crude steel", source: "EU BREF Iron & Steel 2013, table 8.1 (direct stack CO2)" },
+  gas: { min: 1.0, max: 2.2, unit: "GJ (NCV) / t hot-rolled", source: "BAT conclusions 2022/2110 table 1.1 (1.2–1.5 GJ/t); FMP BREF table A.3-2 (1.1–2.2)" },
+  yield: { min: 0.85, max: 0.99, unit: "t hot-rolled / t crude steel", source: "FMP BREF 2001, table A.3-4 (70–150 kg/t metallic by-products); upper bound assumed" },
 } satisfies Record<string, Range>;
 
 export type CheckStatus = "pass" | "warn" | "fail";
@@ -97,6 +100,8 @@ export function runChecks(opts: {
     const mwh = by("electricity").reduce((s, l) => s + (l.unit === "kWh" ? l.quantity / 1000 : l.quantity), 0);
     checks.push(inRange("electricity", "Electricity per tonne of crude steel", (mwh * 1000) / crude, ranges.electricity));
     checks.push(inRange("electrodes", "Electrode consumption", (sum(by("electrodes")) * 1000) / crude, ranges.electrodes));
+    checks.push(inRange("charge-carbon", "Charge carbon", (sum(by("charge_carbon")) * 1000) / crude, ranges.chargeCarbon));
+    checks.push(inRange("stack", "Furnace CO2 per tonne of steel (mass balance)", (result.eaf.ownDirectT * 1000) / crude, ranges.stack));
     checks.push(inRange("metallic", "Metallic charge per tonne of crude steel", (sum(by("scrap")) + sum(by("pig_iron"))) / crude, ranges.metallic));
   }
   if (result.hotRolledT > 0) {

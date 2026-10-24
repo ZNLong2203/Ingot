@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { documents, supplier } from "@/lib/samples/marmara";
 import { calculate, gasNetTj, type ActivityLine, type PrecursorInput } from "./calculate";
-import { certificatesDue, compareWithDefault, turkeyDefaultSee } from "./cost";
+import { certificatesDue, compareWithDefault, sefaActualCoil, sefaDefaultCoil, turkeyDefaultSee } from "./cost";
 
 function referenceLines(includeCopy = false): ActivityLine[] {
   return documents
@@ -30,20 +30,25 @@ describe("embedded emissions of the demo mill", () => {
     expect(tj).toBeCloseTo(34.497, 2);
   });
 
-  it("adds up each source stream with its factor", () => {
+  it("balances carbon in the furnace and burns gas in the reheating furnace", () => {
     const row = (s: string) => r.trace.find((t) => t.stream === s)!;
-    expect(row("natural_gas").directT).toBeCloseTo(12_240.3, 0);
-    expect(row("charge_carbon").directT).toBeCloseTo(6_815.9, 0);
-    expect(row("electrodes").directT).toBeCloseTo(1_057.5, 0);
-    expect(row("carbonates").directT).toBeCloseTo(574.8, 0);
+    expect(row("scrap").directT).toBeCloseTo(7_128, 1);
+    expect(row("pig_iron").directT).toBeCloseTo(2_700, 1);
+    expect(row("electrodes").directT).toBeCloseTo(866.1, 1);
+    expect(row("charge_carbon").directT).toBeCloseTo(9_864.8, 1);
+    expect(row("crude_steel").directT).toBeCloseTo(-7_208, 1);
+    expect(row("carbonates").directT).toBeCloseTo(574.8, 1);
+    expect(row("natural_gas").directT).toBeCloseTo(12_240.7, 0);
     expect(row("precursor").directT).toBe(34_380);
+    // 77 kg CO2 per tonne of liquid steel: inside the EU BREF's 72-180 for EAF stacks.
+    expect((r.eaf.ownDirectT / r.crudeSteelT) * 1000).toBeCloseTo(77.3, 1);
   });
 
   it("produces specific embedded emissions for the rolled good", () => {
     expect(r.crudeSteelT).toBe(180_200);
     expect(r.hotRolledT).toBe(171_200);
-    expect(r.seeDirect).toBeCloseTo(0.3217, 4);
-    expect(r.directKgPerTonne).toBe(322);
+    expect(r.seeDirect).toBeCloseTo(0.35366, 4);
+    expect(r.directKgPerTonne).toBe(354);
     expect(r.missing).toEqual([]);
   });
 
@@ -63,19 +68,30 @@ describe("CBAM certificates", () => {
     expect(turkeyDefaultSee(72083900, 2028)).toBeCloseTo(3.1564, 4);
   });
 
-  it("compares verified actual data with the default value", () => {
-    const c = compareWithDefault({ tonnes: 6_000, see: 0.322, cnCode: 72083900, route: "E", year: 2026, priceEur: 82.32 });
-    expect(c.actual.sefa).toBeCloseTo(0.0702, 4);
-    expect(c.actual.eurPerTonne).toBeCloseTo(20.73, 2);
-    expect(c.fallback.eurPerTonne).toBeCloseTo(109.9, 1);
-    expect(c.savingEur).toBeCloseTo(6_000 * (109.9 - 20.73), -2);
+  it("builds the free allocation adjustment from column A through the precursors", () => {
+    const s = sefaActualCoil({ year: 2026, crudeSteelT: 180_200, hotRolledT: 171_200, pigIronT: 18_000 });
+    expect(s.pig).toBeCloseTo(0.975 * 1.089, 6);
+    expect(s.crude).toBeCloseTo(0.975 * 0.065 + (18_000 / 180_200) * 0.975 * 1.089, 6);
+    expect(s.sefa).toBeCloseTo(0.2212, 4);
+    expect(sefaDefaultCoil(2026)).toBeCloseTo(1.33575, 5);
   });
 
-  it("never goes below zero and falls as the free allocation phases out", () => {
-    expect(certificatesDue({ tonnes: 100, see: 0.05, route: "E", year: 2026, priceEur: 80 }).certificates).toBe(0);
-    const y26 = certificatesDue({ tonnes: 1, see: 0.322, route: "E", year: 2026, priceEur: 80 }).certificates;
-    const y34 = certificatesDue({ tonnes: 1, see: 0.322, route: "E", year: 2034, priceEur: 80 }).certificates;
-    expect(y34).toBeCloseTo(0.322, 6);
-    expect(y34).toBeGreaterThan(y26);
+  it("compares verified actual data with the default value", () => {
+    const c = compareWithDefault({ tonnes: 6_000, see: 0.354, sefaActual: 0.2212, cnCode: 72083900, year: 2026, priceEur: 82.32 });
+    expect(c.actual.eurPerTonne).toBeCloseTo((0.354 - 0.2212) * 82.32, 4);
+    expect(c.fallback.netPerTonne).toBeCloseTo(1.33505, 4);
+    expect(c.fallback.eurPerTonne).toBeCloseTo(109.9, 1);
+    expect(c.savingEur).toBeCloseTo(6_000 * (c.fallback.eurPerTonne - c.actual.eurPerTonne), 4);
+  });
+
+  it("never goes below zero", () => {
+    expect(certificatesDue({ tonnes: 100, see: 0.05, sefa: 0.2, priceEur: 80 }).certificates).toBe(0);
+  });
+
+  it("charges more as the free allocation phases out", () => {
+    const y26 = sefaActualCoil({ year: 2026, crudeSteelT: 180_200, hotRolledT: 171_200, pigIronT: 18_000 }).sefa;
+    const y34 = sefaActualCoil({ year: 2034, crudeSteelT: 180_200, hotRolledT: 171_200, pigIronT: 18_000 }).sefa;
+    expect(y34).toBe(0);
+    expect(y26).toBeGreaterThan(y34);
   });
 });

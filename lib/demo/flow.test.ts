@@ -37,7 +37,7 @@ describe("demo flow", async () => {
     expect(precursors[0].quantityTonnes).toBe(supplier.deliveredTonnes);
 
     const result = calculate(deriveLines(state).lines, precursors);
-    expect(result.directKgPerTonne).toBe(322);
+    expect(result.directKgPerTonne).toBe(354);
     const report = commit(reportFields(result), keccak256(toHex("mill seed")));
     const a = prepareAttestation({ chain, result, precursors, report });
     const signature = await sign(chain, "verifier", a);

@@ -16,7 +16,8 @@ export const sources = {
   defaults: { label: "Default values, Implementing Reg. (EU) 2025/2621 as amended by 2026/1740 (Commission file of 10 Aug 2026)", url: DV_XLSX },
   benchmarks: { label: "CBAM benchmarks, Implementing Reg. (EU) 2025/2620 (Commission file of 6 Feb 2026)", url: BM_XLSX },
   prices: { label: "Price of CBAM certificates, European Commission", url: PRICE_PAGE },
-  cbamFactor: { label: "CBAM factor schedule, Commission guidance on verification and accreditation, table 3", url: VERIFICATION_GUIDANCE },
+  cbamFactor: { label: "CBAM factor, Art. 10a(1a) of Directive 2003/87/EC as amended by Directive (EU) 2023/959", url: "http://data.europa.eu/eli/dir/2023/959/oj" },
+  verification: { label: "Commission guidance on CBAM verification and accreditation", url: VERIFICATION_GUIDANCE },
 };
 
 /** Direct-emission default values for Türkiye, before the mark-up (t CO2e per tonne of good). */
@@ -36,18 +37,24 @@ export function defaultMarkup(year: number): number {
 }
 
 /**
- * Column B benchmarks for CN 7208 (whole production chain), by production
- * route indicator in the Commission's file: (C) 1.37, (D) 0.481, (E) 0.072.
- * Reading of the indicators, to be checked against Reg. 2025/2620:
- * (C) blast furnace / basic oxygen route, (D) direct reduction route,
- * (E) scrap-based electric arc furnace route.
+ * CBAM benchmarks (Implementing Reg. (EU) 2025/2620, Annex point 5.3).
+ * Column A (BM*) is process-related and used with actual data; column B
+ * (BM) is the whole-chain benchmark used with default values, by production
+ * route: (C) blast furnace / basic oxygen, (D) DRI / EAF, (E) scrap / EAF.
+ * The default route for Türkiye, CN 7208, is (C) (Reg. 2025/2621 Annex I).
  */
-export const hotRolledBenchmarks = {
-  C: { value: 1.37, route: "Blast furnace / basic oxygen furnace" },
-  D: { value: 0.481, route: "Direct reduced iron / electric arc furnace" },
-  E: { value: 0.072, route: "Scrap-based electric arc furnace" },
+export const benchmarks = {
+  hotRolled: { cn: "7208", columnA: 0.044, columnB: { C: 1.37, D: 0.481, E: 0.072 } },
+  crudeSteel: { cn: "7207 (continuously cast)", columnA: { C: 0.188, D: 0.065, E: 0.065 } },
+  pigIron: { cn: "7201", columnA: 1.089, columnB: 1.21 },
 } as const;
-export type RouteIndicator = keyof typeof hotRolledBenchmarks;
+export type RouteIndicator = keyof typeof benchmarks.hotRolled.columnB;
+
+/** Default production route for Türkiye's hot-rolled flat products in the default values act. */
+export const turkeyDefaultRoute: RouteIndicator = "C";
+
+/** Carbon steel weighting factor (CSCF), 100 % for 2026–2030 (Implementing Decision (EU) 2026/1862). */
+export const cscf = 1;
 
 /** Share of free allocation still reflected in the CBAM obligation, by year (CSCF taken as 1). */
 export const cbamFactor: Record<number, number> = {

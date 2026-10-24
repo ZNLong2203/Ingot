@@ -3,18 +3,18 @@ import { factors } from "./factors";
 
 /**
  * Embedded emissions of hot-rolled steel from a scrap-based EAF mill, after
- * the Commission's methodology (Implementing Reg. (EU) 2025/2547, as quoted
- * in Guidance No. 3):
+ * the Commission's methodology (Implementing Reg. (EU) 2025/2547):
  *
- *   Em (combustion)   = AD × EF × OF,   AD = fuel quantity × NCV
- *   Em (process)      = AD × EF
- *   EE_proc           = AttrEm_proc + Σ M_i × SEE_i          (precursors)
- *   SEE_g             = EE_proc / AL_g
+ *   EAF steelmaking   carbon mass balance: Σ carbon in − Σ carbon out
+ *                     (scrap, pig iron, electrodes, charge carbon in; steel
+ *                     out), plus raw carbonates charged      (Annex I 3.15.2.2)
+ *   Hot rolling       combustion: fuel × NCV × EF × OF       (Annex II B.3.1.1)
+ *   Precursors        EE_proc = AttrEm_proc + Σ M_i × SEE_i
+ *   Good              SEE_g = EE_proc / AL_g
  *
- * Two production processes: EAF steelmaking (crude steel) feeds hot rolling
- * (the CBAM good). Indirect emissions are computed and reported, but for
- * iron and steel only direct emissions count towards the CBAM obligation
- * (Annex II of Regulation (EU) 2023/956).
+ * Crude steel from the furnace is the internal precursor of the rolled
+ * coil. Indirect emissions are computed and reported, but for iron and steel
+ * only direct emissions count (Annex II of Regulation (EU) 2023/956).
  */
 
 export interface ActivityLine {
@@ -57,7 +57,8 @@ export interface Result {
   trace: TraceRow[];
   crudeSteelT: number;
   hotRolledT: number;
-  eaf: { directT: number; indirectT: number; seeDirect: number; seeIndirect: number };
+  pigIronT: number;
+  eaf: { ownDirectT: number; directT: number; indirectT: number; seeDirect: number; seeIndirect: number };
   rolling: { directT: number; indirectT: number };
   precursorDirectT: number;
   precursorIndirectT: number;
@@ -94,48 +95,37 @@ export function calculate(all: ActivityLine[], precursors: PrecursorInput[], gri
   if (crudeSteelT <= 0) missing.push("crude steel production");
   if (hotRolledT <= 0) missing.push("hot-rolled output");
 
-  // ── EAF steelmaking ──────────────────────────────────────────────────────
-  const carbon = by("charge_carbon");
-  const carbonT = carbon.reduce((s, l) => s + l.quantity * (l.carbonFraction ?? 0), 0);
-  if (carbon.some((l) => l.carbonFraction == null)) missing.push("carbon content of charge carbon");
-  trace.push({
-    process: "eaf",
-    stream: "charge_carbon",
-    label: "Charge carbon (anthracite)",
-    quantity: sum(carbon),
-    unit: "t",
-    formula: `${fmt(sum(carbon))} t × carbon content × ${f.co2PerCarbon.value.toFixed(3)} t CO2/t C`,
-    directT: carbonT * f.co2PerCarbon.value,
-    indirectT: 0,
-    lineIds: ids(carbon),
-  });
-
-  const electrodes = by("electrodes");
-  trace.push({
-    process: "eaf",
-    stream: "electrodes",
-    label: "Graphite electrodes consumed",
-    quantity: sum(electrodes),
-    unit: "t",
-    formula: `${fmt(sum(electrodes))} t × ${f.electrodeEf.value} t CO2/t`,
-    directT: sum(electrodes) * f.electrodeEf.value,
-    indirectT: 0,
-    lineIds: ids(electrodes),
-  });
+  // ── EAF steelmaking: carbon mass balance ─────────────────────────────────
+  const balance = (stream: Stream, label: string, factor: { value: number }, sign = 1) => {
+    const ls = by(stream);
+    const q = sum(ls);
+    trace.push({
+      process: "eaf",
+      stream,
+      label,
+      quantity: q,
+      unit: "t",
+      formula: `${sign < 0 ? "− " : ""}${fmt(q, q % 1 ? 1 : 0)} t × ${factor.value} t CO2/t`,
+      directT: sign * q * factor.value,
+      indirectT: 0,
+      lineIds: ids(ls),
+    });
+  };
+  balance("scrap", "Steel scrap charged (carbon in)", f.scrapEf);
+  balance("pig_iron", "Pig iron charged (carbon in)", f.pigIronCarbonEf);
+  balance("electrodes", "Graphite electrodes consumed", f.electrodeEf);
+  balance("charge_carbon", "Charge carbon (anthracite)", f.chargeCarbonEf);
+  balance("crude_steel", "Crude steel cast (carbon out)", f.steelEf, -1);
 
   const carbonates = by("carbonates");
-  const carbonateCo2 = carbonates.reduce(
-    (s, l) => s + l.quantity * (l.carbonateKind === "limestone" ? f.limestoneEf.value : f.dolomiteEf.value),
-    0,
-  );
   trace.push({
     process: "eaf",
     stream: "carbonates",
-    label: "Raw dolomite charged",
+    label: "Raw dolomite charged (decomposition)",
     quantity: sum(carbonates),
     unit: "t",
-    formula: `${fmt(sum(carbonates))} t × ${f.dolomiteEf.value} t CO2/t (stoichiometric)`,
-    directT: carbonateCo2,
+    formula: `${fmt(sum(carbonates))} t × ${f.dolomiteEf.value} t CO2/t`,
+    directT: carbonates.reduce((s, l) => s + l.quantity * (l.carbonateKind === "limestone" ? f.limestoneEf.value : f.dolomiteEf.value), 0),
     indirectT: 0,
     lineIds: ids(carbonates),
   });
@@ -146,14 +136,16 @@ export function calculate(all: ActivityLine[], precursors: PrecursorInput[], gri
   trace.push({
     process: "eaf",
     stream: "electricity",
-    label: "Electricity from the grid (whole site)",
+    label: "Grid electricity, whole site (indirect)",
     quantity: mwh,
     unit: "MWh",
-    formula: `${fmt(mwh)} MWh × ${gridEf} t CO2/MWh (indirect)`,
+    formula: `${fmt(mwh)} MWh × ${gridEf} t CO2e/MWh`,
     directT: 0,
     indirectT: mwh * gridEf,
     lineIds: ids(electricity),
   });
+
+  const ownDirect = trace.filter((r) => r.process === "eaf").reduce((s, r) => s + r.directT, 0);
 
   let precursorDirectT = 0;
   let precursorIndirectT = 0;
@@ -183,7 +175,7 @@ export function calculate(all: ActivityLine[], precursors: PrecursorInput[], gri
   const eafDirect = trace.filter((r) => r.process === "eaf").reduce((s, r) => s + r.directT, 0);
   const eafIndirect = trace.filter((r) => r.process === "eaf").reduce((s, r) => s + r.indirectT, 0);
 
-  // ── Hot rolling ──────────────────────────────────────────────────────────
+  // ── Hot rolling: reheating furnace ───────────────────────────────────────
   const gas = by("natural_gas");
   const gasTj = gas.reduce((s, l) => s + gasNetTj(l), 0);
   if (gas.some((l) => l.unit === "Sm3" && !l.gcvKcalPerSm3)) missing.push("gas calorific value");
@@ -212,7 +204,8 @@ export function calculate(all: ActivityLine[], precursors: PrecursorInput[], gri
     trace,
     crudeSteelT,
     hotRolledT,
-    eaf: { directT: eafDirect, indirectT: eafIndirect, seeDirect: seeCrudeDirect, seeIndirect: seeCrudeIndirect },
+    pigIronT,
+    eaf: { ownDirectT: ownDirect, directT: eafDirect, indirectT: eafIndirect, seeDirect: seeCrudeDirect, seeIndirect: seeCrudeIndirect },
     rolling: { directT: rollingDirect, indirectT: rollingIndirect },
     precursorDirectT,
     precursorIndirectT,
