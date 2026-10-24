@@ -11,7 +11,7 @@
 *.pem
 *.key
 # Hardhat keystore (encrypted deployer key)
-/contracts/.keystore/
+/.keystore/
 
 # ─── Dependencies ────────────────────────────────────────────
 /node_modules
@@ -27,10 +27,10 @@
 next-env.d.ts
 
 # ─── Contracts (Hardhat) ─────────────────────────────────────
-/contracts/artifacts/
-/contracts/cache/
-/contracts/types/
-/contracts/ignition/deployments/chain-31337/
+/artifacts/
+/cache/
+/types/
+/ignition/deployments/chain-31337/
 
 # ─── Test / coverage ─────────────────────────────────────────
 /coverage
