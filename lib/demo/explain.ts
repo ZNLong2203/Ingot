@@ -11,6 +11,7 @@ const end = (s: string) => (s.endsWith(".") ? s : `${s}.`);
 const calls: Record<string, string> = {
   accreditVerifier: "Accredit a verifier",
   suspendVerifier: "Suspend a verifier",
+  setVerifierPqKey: "Register a post-quantum key",
   registerInstallation: "Register an installation",
   submitStatement: "Record a verified statement",
   revokeStatement: "Withdraw a statement",
@@ -78,6 +79,7 @@ export function describe(tx: SandboxTx): { title: string; detail: string } {
   if (ev.Allocated) return { title, detail: end(`${t(ev.Allocated.quantityKg)} to ${who(ev.Allocated.recipient)}`) };
   if (ev.Declared) return { title, detail: `${who(ev.Declared.declarant)} surrendered the allocation.` };
   if (ev.VerifierAccredited) return { title, detail: end(String(ev.VerifierAccredited.name)) };
+  if (ev.VerifierPqKeySet) return { title, detail: end(`ML-DSA-65 key hash for ${who(ev.VerifierPqKeySet.verifier)}`) };
   if (ev.InstallationRegistered) return { title, detail: end(`${who(ev.InstallationRegistered.operator)}, registered by ${who(ev.InstallationRegistered.registeredBy)}`) };
   if (ev.StatementRevoked) return { title, detail: end(`By ${who(ev.StatementRevoked.by)}`) };
   return { title, detail: "" };
