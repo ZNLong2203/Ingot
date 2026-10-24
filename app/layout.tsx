@@ -10,9 +10,12 @@ const archivo = Archivo({ variable: "--font-archivo", subsets: ["latin", "latin-
 const mono = JetBrains_Mono({ variable: "--font-mono-face", subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(site.live),
   title: { default: `${site.name} · ${site.tagline}`, template: `%s · ${site.name}` },
   description: site.description,
   applicationName: site.name,
+  openGraph: { type: "website", siteName: site.name, title: `${site.name} · ${site.tagline}`, description: site.description, url: "/" },
+  twitter: { card: "summary_large_image", title: `${site.name} · ${site.tagline}`, description: site.description },
 };
 
 export const viewport: Viewport = {
