@@ -39,6 +39,8 @@ export interface SignedStatement {
   reportSeed: Hex;
   reportFields: Record<string, string | number>;
   precursors: LedgerPrecursor[];
+  /** ML-DSA-65 co-signature over the statement id, base64. */
+  pq?: string;
   statementId?: Hex;
 }
 
@@ -52,7 +54,7 @@ export interface DemoState {
   shipments: Shipment[];
 }
 
-const KEY = "ingot.demo.v2";
+const KEY = "ingot.demo.v3";
 const initial: DemoState = { step: 0, runs: {}, uploads: [], removed: {}, shipments: [] };
 
 let state: DemoState = initial;

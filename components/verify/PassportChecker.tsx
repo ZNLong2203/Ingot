@@ -5,6 +5,7 @@ import { hashTypedData, keccak256, encodeAbiParameters } from "viem";
 import { actors } from "@/lib/chain/actors";
 import { attestationTypes, registryDomain } from "@/lib/chain/eip712";
 import { disclose, commit } from "@/lib/crypto/disclosure";
+import { demoPqKeys, pqSign } from "@/lib/crypto/pq";
 import { buildPassport, checkPassport, looksLikePassport, type Passport, type PassportCheck } from "@/lib/passport";
 import { exampleDelivery, getWorld, shipmentRef, sign, smelterAttestation, smelterReport, smelterSeed } from "@/lib/demo/world";
 import { supplier } from "@/lib/samples/marmara";
@@ -48,6 +49,7 @@ async function examplePassport(): Promise<Passport> {
     },
     disclosures: ["directKgPerTonne", "route", "period"].map((k) => disclose(report, k)),
     issuedAt: chain.now,
+    pq: { publicKey: demoPqKeys("verifier2").publicKey, signature: pqSign(statementId, demoPqKeys("verifier2").secretKey) },
   });
 }
 

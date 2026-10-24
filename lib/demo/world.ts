@@ -4,6 +4,7 @@ import { attestationTypes, hashInputs, precursorEmissions, registryDomain, type 
 import { SandboxChain, type ReplayEntry, type SandboxTx } from "@/lib/chain/sandbox";
 import { commit } from "@/lib/crypto/disclosure";
 import { deserialize, serialize } from "@/lib/json";
+import { demoPqKeys, pqKeyHash } from "@/lib/crypto/pq";
 import { installation, supplier } from "@/lib/samples/marmara";
 
 /**
@@ -80,6 +81,8 @@ async function seed(chain: SandboxChain) {
   const until = T0 + 2 * 365 * 86_400;
   await write(chain, "authority", "accreditVerifier", [actors.verifier.address, actors.verifier.name, until]);
   await write(chain, "authority", "accreditVerifier", [actors.verifier2.address, actors.verifier2.name, until]);
+  await write(chain, "authority", "setVerifierPqKey", [actors.verifier.address, pqKeyHash(demoPqKeys("verifier").publicKey)]);
+  await write(chain, "authority", "setVerifierPqKey", [actors.verifier2.address, pqKeyHash(demoPqKeys("verifier2").publicKey)]);
   await write(chain, "verifier2", "registerInstallation", [ids.smelter, actors.supplier.address, "0x4252", keccak256(toHex(JSON.stringify(supplier)))]);
   await write(chain, "verifier", "registerInstallation", [ids.mill, actors.operator.address, "0x5452", keccak256(toHex(JSON.stringify(installation)))]);
 
@@ -92,7 +95,7 @@ async function seed(chain: SandboxChain) {
 }
 
 let world: Promise<SandboxChain> | null = null;
-const KEY = "ingot.sandbox.v2";
+const KEY = "ingot.sandbox.v3";
 type Listener = () => void;
 const listeners = new Set<Listener>();
 let version = 0;

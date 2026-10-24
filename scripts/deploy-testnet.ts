@@ -26,6 +26,7 @@ import { registryAbi, registryBytecode } from "@/lib/chain/registry-artifact";
 import { calculate } from "@/lib/cbam/calculate";
 import { sefaActualCoil } from "@/lib/cbam/cost";
 import { commit } from "@/lib/crypto/disclosure";
+import { demoPqKeys, pqKeyHash } from "@/lib/crypto/pq";
 import { deriveLines, referenceExtraction } from "@/lib/demo/derive";
 import { reportFields } from "@/lib/demo/flow";
 import type { DemoState } from "@/lib/demo/store";
@@ -75,6 +76,8 @@ const now = Number((await pub.getBlock()).timestamp);
 const until = now + 2 * 365 * 86_400;
 await call("authority", "Accredit Anatolia Verification", "accreditVerifier", [actors.verifier.address, actors.verifier.name, until]);
 await call("authority", "Accredit Atlântico Verificação", "accreditVerifier", [actors.verifier2.address, actors.verifier2.name, until]);
+await call("authority", "Register Anatolia's ML-DSA-65 key", "setVerifierPqKey", [actors.verifier.address, pqKeyHash(demoPqKeys("verifier").publicKey)]);
+await call("authority", "Register Atlântico's ML-DSA-65 key", "setVerifierPqKey", [actors.verifier2.address, pqKeyHash(demoPqKeys("verifier2").publicKey)]);
 await call("verifier2", "Register the smelter", "registerInstallation", [ids.smelter, actors.supplier.address, "0x4252", ids.smelter]);
 await call("verifier", "Register the mill", "registerInstallation", [ids.mill, actors.operator.address, "0x5452", ids.mill]);
 

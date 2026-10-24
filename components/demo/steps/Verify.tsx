@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { bytesToHex, keccak256, toHex, type Hex } from "viem";
+import { bytesToHex, hashTypedData, keccak256, toHex, type Hex } from "viem";
+import { attestationTypes, registryDomain } from "@/lib/chain/eip712";
+import { demoPqKeys, pqSign, toBase64 } from "@/lib/crypto/pq";
 import { actors } from "@/lib/chain/actors";
 import { sefaActualCoil } from "@/lib/cbam/cost";
 import type { CheckStatus } from "@/lib/cbam/checks";
@@ -53,7 +55,9 @@ export function Verify({ onNext }: { onNext: () => void }) {
       const chain = await getWorld();
       const a = prepareAttestation({ chain, result: result!, precursors, report: report! });
       const signature = await sign(chain, "verifier", a);
-      setState({ signed: { attestation: a, signature, reportSeed: seed, reportFields: fields!, precursors } });
+      const digest = hashTypedData({ domain: registryDomain(chain.chainId, chain.registry), types: attestationTypes, primaryType: "Attestation", message: a });
+      const pq = toBase64(pqSign(digest, demoPqKeys("verifier").secretKey));
+      setState({ signed: { attestation: a, signature, reportSeed: seed, reportFields: fields!, precursors, pq } });
     } finally {
       setBusy(null);
     }
@@ -182,13 +186,19 @@ export function Verify({ onNext }: { onNext: () => void }) {
         {blocking.length > 0 && <Callout tone="danger" title="Resolve the failed checks before signing" />}
         <div className="flex flex-wrap items-center gap-3">
           <Button onClick={signIt} disabled={Boolean(busy) || blocking.length > 0 || Boolean(signed)} tone={signed ? "done" : "verifier"}>
-            <Icon name={signed ? "check" : "sign"} /> {signed ? `Signed by ${actors.verifier.name}` : `Sign as ${actors.verifier.name} (EIP-712)`}
+            <Icon name={signed ? "check" : "sign"} /> {signed ? `Signed by ${actors.verifier.name}` : `Sign as ${actors.verifier.name}`}
           </Button>
           <Icon name="arrow" className="h-4 w-4 text-muted" />
           <Button onClick={submit} disabled={!signed || recorded || Boolean(busy)} tone={recorded ? "done" : "mill"}>
             <Icon name={recorded ? "check" : "chain"} /> {recorded ? "Recorded on the ledger" : busy === "submit" ? "Recording…" : `Record as ${actors.operator.name}`}
           </Button>
         </div>
+        <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
+          Hybrid signature:
+          <span className={`rounded-full px-2 py-0.5 font-medium ${signed ? "bg-verifier-soft text-verifier" : "bg-paper-2"}`}>ECDSA · EIP-712</span>
+          <span className={`rounded-full px-2 py-0.5 font-medium ${signed?.pq ? "bg-verifier-soft text-verifier" : "bg-paper-2"}`}>ML-DSA-65 · FIPS 204, post-quantum</span>
+          <span>the second key&apos;s hash is registered on chain</span>
+        </p>
         {signed && (
           <details className="text-xs">
             <summary className="cursor-pointer text-ink-2 hover:text-ink">Show the signed typed data</summary>

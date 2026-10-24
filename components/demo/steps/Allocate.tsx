@@ -9,6 +9,7 @@ import { setState, useDemo, type DemoState, type Shipment } from "@/lib/demo/sto
 import { act, getWorld, shipmentRef } from "@/lib/demo/world";
 import { describe } from "@/lib/demo/explain";
 import { buildPassport, type Passport } from "@/lib/passport";
+import { demoPqKeys, fromBase64 } from "@/lib/crypto/pq";
 import { installation } from "@/lib/samples/marmara";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -40,6 +41,7 @@ export function passportFor(state: DemoState, chain: SandboxChain, s: Shipment):
     allocation: { id: s.allocationId, tonnes: s.tonnes, recipient: actors[s.recipient].address, shipmentRef: shipmentRef(s.mrn), reference: s.mrn },
     disclosures: disclosuresFor(report, ["directKgPerTonne", "sefaKgPerTonne2026", "route", "period", "cnCode"]),
     issuedAt: chain.now,
+    pq: signed.pq ? { publicKey: demoPqKeys("verifier").publicKey, signature: fromBase64(signed.pq) } : undefined,
   });
 }
 

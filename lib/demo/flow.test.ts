@@ -4,6 +4,7 @@ import { actors } from "@/lib/chain/actors";
 import { calculate } from "@/lib/cbam/calculate";
 import { documents, supplier } from "@/lib/samples/marmara";
 import { checkPassport, buildPassport } from "@/lib/passport";
+import { demoPqKeys, pqSign } from "@/lib/crypto/pq";
 import { referenceExtraction, deriveLines, deliveryNoteNumbers } from "./derive";
 import { commit, disclosuresFor, findPrecursors, prepareAttestation, reportFields } from "./flow";
 import type { DemoState } from "./store";
@@ -61,6 +62,7 @@ describe("demo flow", async () => {
       allocation: { id: allocationId, tonnes: 6_000, recipient: actors.importer.address, shipmentRef: shipmentRef("26TR341000EX000101"), reference: "26TR341000EX000101" },
       disclosures: disclosuresFor(report),
       issuedAt: chain.now,
+      pq: { publicKey: demoPqKeys("verifier").publicKey, signature: pqSign(statementId, demoPqKeys("verifier").secretKey) },
     };
   });
 
@@ -68,6 +70,12 @@ describe("demo flow", async () => {
     const { checks, status } = await checkPassport(buildPassport(passportArgs), chain);
     expect(checks.filter((c) => !c.ok)).toEqual([]);
     expect(status).toBe("open");
+  });
+
+  it("refuses a post-quantum co-signature made with an unregistered key", async () => {
+    const p = buildPassport({ ...passportArgs, pq: { publicKey: demoPqKeys("verifier2").publicKey, signature: pqSign(statementId, demoPqKeys("verifier2").secretKey) } });
+    const { checks } = await checkPassport(p, chain);
+    expect(checks.find((c) => c.title === "Post-quantum co-signature")?.ok).toBe(false);
   });
 
   it("catches a passport whose numbers were edited", async () => {

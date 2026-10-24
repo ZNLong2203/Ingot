@@ -1,8 +1,9 @@
-import { hashTypedData, recoverTypedDataAddress, type Address, type Hex } from "viem";
+import { hashTypedData, recoverTypedDataAddress, zeroHash, type Address, type Hex } from "viem";
 import { actorByAddress } from "@/lib/chain/actors";
 import { attestationTypes, registryDomain, type Attestation } from "@/lib/chain/eip712";
 import type { SandboxChain } from "@/lib/chain/sandbox";
 import { verifyDisclosure, type Disclosure } from "@/lib/crypto/disclosure";
+import { fromBase64, PQ_ALGORITHM, pqKeyHash, pqVerify, toBase64 } from "@/lib/crypto/pq";
 
 /**
  * A CBAM emissions passport: what an importer receives with a shipment. It
@@ -31,6 +32,8 @@ export interface Passport {
     verificationMethod: string;
     proofValue: Hex;
     eip712: { domain: ReturnType<typeof registryDomain>; primaryType: "Attestation"; message: JsonAttestation };
+    /** Post-quantum co-signature over the statement id; its key hash is registered on chain. */
+    pq?: { algorithm: string; publicKey: string; proofValue: string };
   };
   anchor: { network: "sandbox" | "sepolia"; chainId: number; registry: Address; statementId: Hex };
 }
@@ -64,6 +67,7 @@ export function buildPassport(opts: {
   allocation: { id: Hex; tonnes: number; recipient: Address; shipmentRef: Hex; reference: string };
   disclosures: Disclosure[];
   issuedAt: number;
+  pq?: { publicKey: Uint8Array; signature: Uint8Array };
 }): Passport {
   const { chain, attestation: a } = opts;
   const created = new Date(opts.issuedAt * 1000).toISOString();
@@ -93,6 +97,7 @@ export function buildPassport(opts: {
       verificationMethod: `${did(chain.chainId, opts.verifier)}#blockchainAccountId`,
       proofValue: opts.signature,
       eip712: { domain: registryDomain(chain.chainId, chain.registry), primaryType: "Attestation", message: toJson(a) },
+      ...(opts.pq ? { pq: { algorithm: PQ_ALGORITHM, publicKey: toBase64(opts.pq.publicKey), proofValue: toBase64(opts.pq.signature) } } : {}),
     },
     anchor: { network: "sandbox", chainId: chain.chainId, registry: chain.registry, statementId: opts.statementId },
   };
@@ -175,6 +180,25 @@ export async function checkPassport(p: Passport, chain: SandboxChain): Promise<{
       ? `${actorByAddress(signer)?.name ?? short(signer)}; accredited when recorded${accredited ? ", still accredited" : ", since suspended or expired"}.`
       : "The signature does not recover.",
   });
+  const registered = signer ? await chain.read("pqKeyHash", [signer]) : zeroHash;
+  if (registered !== zeroHash || p.proof.pq) {
+    const pq = p.proof.pq;
+    let ok = false;
+    let detail = "The verifier has a post-quantum key on record, but the passport carries no co-signature.";
+    if (pq) {
+      const pk = fromBase64(pq.publicKey);
+      const valid = pqVerify(fromBase64(pq.proofValue), digest, pk);
+      const bound = pqKeyHash(pk).toLowerCase() === registered.toLowerCase();
+      ok = valid && bound;
+      detail = !valid
+        ? "The ML-DSA-65 signature does not verify over the statement id."
+        : !bound
+          ? "The ML-DSA-65 key is not the one registered for this verifier."
+          : "ML-DSA-65 (FIPS 204) over the statement id; the key matches the one registered on chain.";
+    }
+    checks.push({ title: "Post-quantum co-signature", ok, detail });
+  }
+
   if (statement) {
     checks.push({
       title: "Not revoked",
