@@ -6,7 +6,7 @@ Since 1 January 2026 EU importers pay for the carbon embedded in steel, aluminiu
 
 **IEEE ClimateChain Global Hackathon 2026 · Track: Carbon Markets & Emissions Transparency** (with Sustainable Supply Chains alongside).
 
-**Live demo: _link added at submission_** · **Video (3 min): _link added at submission_** · Try it in five minutes: open *Try the flow*, press *Read all 7 documents*, and follow the steps; the buttons marked *Try to cheat* send real transactions that the contract refuses.
+**Live demo: [ingot-six-blush.vercel.app](https://ingot-six-blush.vercel.app)** · **Video (3 min): _link added at submission_** · Try it in five minutes: open *Try the flow*, press *Read all 7 documents*, and follow the steps; the buttons marked *Try to cheat* send real transactions that the contract refuses.
 
 ![The guided demo: Turkish gas invoices read by AI, one re-sent invoice caught and left out](docs/images/01-evidence.png)
 
