@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 
 import { network } from "hardhat";
 import { keccak256, toHex, zeroHash, type Hex } from "viem";
+import { commit, disclose } from "../../lib/crypto/disclosure.ts";
 
 const DAY = 86_400;
 const Q1_START = 1_767_225_600; // 2026-01-01T00:00:00Z
@@ -243,15 +244,18 @@ describe("CbamPassportRegistry", async function () {
 
   it("proves one disclosed field against the evidence root", async function () {
     const registry = await deploy();
-    // Two salted leaves, hashed the way lib/crypto/disclosure.ts does.
-    const leafA = keccak256(keccak256(toHex("salt-a|directKgPerTonne|420")));
-    const leafB = keccak256(keccak256(toHex("salt-b|electricityMWh|58000")));
-    const [lo, hi] = [leafA, leafB].sort();
-    const root = keccak256(`0x${lo.slice(2)}${hi.slice(2)}`);
-    const a = await attestation({ evidenceRoot: root });
+    // The same commitment the web app builds (lib/crypto/disclosure.ts).
+    const report = commit(
+      { directKgPerTonne: 420, electricityMWh: 58_000, naturalGasNm3: 3_900_000, scrapTonnes: 11_200 },
+      keccak256(toHex("operator secret")),
+    );
+    const a = await attestation({ evidenceRoot: report.root });
     await registry.write.submitStatement([a, await sign(registry, a)], { account: operator.account });
     const statementId = await registry.read.statementIds([0n]);
-    assert.equal(await registry.read.verifyDisclosure([statementId, leafA, [leafB]]), true);
-    assert.equal(await registry.read.verifyDisclosure([statementId, leafA, [leafA]]), false);
+    const d = disclose(report, "electricityMWh");
+    const leaf = report.leaves.find((l) => l.key === "electricityMWh")!.leaf;
+    assert.equal(await registry.read.verifyDisclosure([statementId, leaf, d.proof]), true);
+    const forged = report.leaves.find((l) => l.key === "directKgPerTonne")!.leaf;
+    assert.equal(await registry.read.verifyDisclosure([statementId, forged, d.proof]), false);
   });
 });
