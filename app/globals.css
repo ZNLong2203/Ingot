@@ -1,53 +1,82 @@
 @import "tailwindcss";
 
-/* Ingot design tokens. Mill paper and graphite ink; one warm "molten" accent
-   for emissions, one green for what has been verified, one red for what the
-   ledger refused. Each colour means the same thing on every page. */
+/* Ingot design tokens.
+   Surfaces: warm paper and graphite ink.
+   Meaning: molten = emissions and cost, verified = what checks out,
+   refused = what the ledger blocked, chain = what lives on chain.
+   Roles: each actor keeps one colour on every page:
+   mill (amber), engine (sky), verifier (violet), importer (emerald). */
 :root {
-  --paper: #f5f3ee;
-  --paper-2: #ebe8e0;
-  --card: #fffdf9;
-  --ink: #16191d;
-  --ink-2: #353b42;
-  --muted: #5e656d;
-  --line: #d8d4ca;
-  --line-strong: #b9b4a8;
+  --paper: #f6f4ef;
+  --paper-2: #ece9e1;
+  --card: #fffefb;
+  --ink: #15181c;
+  --ink-2: #39404a;
+  --muted: #646b75;
+  --line: #e0dcd2;
+  --line-strong: #c3beb2;
 
-  --molten: #c2410c;
-  --molten-soft: #fbe6d9;
-  --verified: #0f6b4f;
-  --verified-soft: #dcefe6;
-  --refused: #b42318;
-  --refused-soft: #fbe3e0;
-  --chain: #3730a3;
-  --chain-soft: #e5e4f7;
-  --warn: #8a5a00;
-  --warn-soft: #f8ecd0;
+  --molten: #d9480f;
+  --molten-soft: #ffe8dc;
+  --verified: #0b7a55;
+  --verified-soft: #d8f3e7;
+  --refused: #c81e1e;
+  --refused-soft: #fde4e2;
+  --chain: #4338ca;
+  --chain-soft: #e6e5fb;
+  --warn: #a15c00;
+  --warn-soft: #fdf0d2;
 
-  --focus: #1d4ed8;
+  --mill: #ea580c;
+  --mill-soft: #ffedd5;
+  --engine: #0284c7;
+  --engine-soft: #e0f2fe;
+  --verifier: #7c3aed;
+  --verifier-soft: #ede9fe;
+  --importer: #059669;
+  --importer-soft: #d1fae5;
+
+  --hero-a: #fff3e8;
+  --hero-b: #eef2ff;
+  --shadow: 0 1px 2px rgb(21 24 28 / 0.05), 0 8px 24px -12px rgb(21 24 28 / 0.12);
+
+  --focus: #2563eb;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #111315;
-    --paper-2: #181b1e;
-    --card: #1b1e22;
-    --ink: #eceae4;
-    --ink-2: #c9c6be;
-    --muted: #9a9fa6;
-    --line: #2d3238;
-    --line-strong: #444a52;
+    --paper: #0d0f12;
+    --paper-2: #161a1f;
+    --card: #14181d;
+    --ink: #eef0f3;
+    --ink-2: #c8cdd4;
+    --muted: #8f97a2;
+    --line: #252b33;
+    --line-strong: #39414c;
 
-    --molten: #f0814a;
-    --molten-soft: #3a2116;
-    --verified: #4fc79a;
-    --verified-soft: #15302a;
-    --refused: #f2817a;
-    --refused-soft: #3a1a18;
-    --chain: #a5a2f5;
-    --chain-soft: #23224a;
-    --warn: #e5b45a;
-    --warn-soft: #33290f;
+    --molten: #ff8a4c;
+    --molten-soft: #3a1d10;
+    --verified: #34d399;
+    --verified-soft: #0f2e24;
+    --refused: #f87171;
+    --refused-soft: #3a1515;
+    --chain: #a5b4fc;
+    --chain-soft: #1f2147;
+    --warn: #fbbf24;
+    --warn-soft: #33270b;
+
+    --mill: #fb923c;
+    --mill-soft: #3a210d;
+    --engine: #38bdf8;
+    --engine-soft: #0b2738;
+    --verifier: #a78bfa;
+    --verifier-soft: #24183f;
+    --importer: #34d399;
+    --importer-soft: #0b2e23;
+
+    --hero-a: #1d140f;
+    --hero-b: #12142a;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px -16px rgb(0 0 0 / 0.6);
 
     --focus: #93b4ff;
   }
@@ -72,9 +101,18 @@
   --color-chain-soft: var(--chain-soft);
   --color-warn: var(--warn);
   --color-warn-soft: var(--warn-soft);
+  --color-mill: var(--mill);
+  --color-mill-soft: var(--mill-soft);
+  --color-engine: var(--engine);
+  --color-engine-soft: var(--engine-soft);
+  --color-verifier: var(--verifier);
+  --color-verifier-soft: var(--verifier-soft);
+  --color-importer: var(--importer);
+  --color-importer-soft: var(--importer-soft);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-archivo), var(--font-inter), ui-sans-serif, sans-serif;
   --font-mono: var(--font-mono-face), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --shadow-card: var(--shadow);
 }
 
 html {
@@ -101,4 +139,64 @@ body {
 
 .num {
   font-variant-numeric: tabular-nums;
+}
+
+/* Components sit in a layer so utilities can override them. */
+@layer components {
+/* Molten-to-amber text for the one word the page is about. */
+.text-gradient {
+  background: linear-gradient(100deg, var(--molten) 0%, #f59e0b 60%, var(--molten) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.bg-hero {
+  background:
+    radial-gradient(60rem 30rem at 0% 0%, var(--hero-a), transparent 60%),
+    radial-gradient(50rem 30rem at 100% 10%, var(--hero-b), transparent 60%),
+    var(--paper);
+}
+
+/* A faint engineering grid behind diagrams. */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--line) 60%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--line) 60%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.card {
+  background-color: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  box-shadow: var(--shadow);
+}
+}
+
+@keyframes flow {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.flow-line {
+  stroke-dasharray: 6 6;
+  animation: flow 1.2s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-line {
+    animation: none;
+  }
+}
+
+details > summary {
+  list-style: none;
+}
+details > summary::-webkit-details-marker {
+  display: none;
 }
