@@ -11,6 +11,8 @@ CI runs the contract, unit, type and lint suites on every push ([.github/workflo
 
 ## AI reading
 
+Result on 24 October 2026, live site, gemini-3.8-flash: **29 of 29 lines exact** (stream, month, unit, quantity within 0.1 %), no extra lines, 7 of 7 document numbers and copy flags right, no calorific value missed; 4.7 to 12.5 s per document.
+
 With `GEMINI_API_KEY` set, the Evidence step sends each sample PDF to Gemini and shows the returned lines next to the reference readings the samples were generated from (`lib/samples/marmara.ts`), so a misread is visible line by line. The duplicate-invoice rule does not depend on the model: it compares document numbers.
 
 ## User testing

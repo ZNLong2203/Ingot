@@ -56,7 +56,7 @@ CBAM cuts emissions only if a producer's real intensity reaches the price its bu
 
 ## AI, and where it stops
 
-Google Gemini (gemini-3.8-flash) reads documents into schema-checked lines (`lib/ai`), each with its source text. It does no arithmetic and makes no judgement: the engine calculates, the checks flag outliers against cited ranges, and the verifier signs only what they have checked. Uploaded files go to the model and are not stored; the route caps size and type and rate-limits by address. Without an API key the demo uses the documents' reference readings and says so.
+Google Gemini (gemini-3.8-flash) reads documents into schema-checked lines. On the seven sample documents it read **29 of 29 lines exactly** (stream, month, unit and quantity), every document number, and the copy stamp on the re-sent invoice, in 5 to 12 seconds per file (`npm run eval:extraction`, run against the live site on 24 October 2026). Each line carries the text it was read from (`lib/ai`). The model does no arithmetic and makes no judgement: the engine calculates, the checks flag outliers against cited ranges, and the verifier signs only what they have checked. Uploaded files go to the model and are not stored; the route caps size and type and rate-limits by address. Without an API key the demo uses the documents' reference readings and says so.
 
 ## Security and data integrity
 

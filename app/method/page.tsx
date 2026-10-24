@@ -312,6 +312,7 @@ Rolling    AttrEm = fuel × NCV × EF × OF                         Annex II B.3
             <ul className="mt-2 space-y-1.5 text-ink-2">
               <li>· Google Gemini (gemini-3.8-flash), schema-checked output</li>
               <li>· Every number with its verbatim source text</li>
+              <li>· 29 of 29 sample lines read exactly in our evaluation</li>
               <li>· No arithmetic, no judgement, files not stored</li>
               <li>· Outliers flagged against cited EU BAT ranges</li>
             </ul>
