@@ -1,6 +1,6 @@
 # Ingot · every tonne carries its carbon, once
 
-[![CI](https://github.com/ZNLong2203/ingot/actions/workflows/ci.yml/badge.svg)](https://github.com/ZNLong2203/ingot/actions/workflows/ci.yml)
+[![CI](https://github.com/ZNLong2203/Ingot/actions/workflows/ci.yml/badge.svg)](https://github.com/ZNLong2203/Ingot/actions/workflows/ci.yml)
 
 Since 1 January 2026 EU importers pay for the carbon embedded in steel, aluminium, cement and fertiliser (the Carbon Border Adjustment Mechanism, CBAM). Without verified data from the foreign mill they pay on default values that the EU marks up on purpose. **Ingot** turns a mill's invoices into a verified CBAM emissions statement and then lets each verified tonne travel, through precursors, shipments and customs, to **exactly one** declaration. AI reads the evidence; a deterministic engine applies the EU method; an accredited verifier signs; a smart contract keeps the count.
 
