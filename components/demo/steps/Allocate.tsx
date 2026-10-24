@@ -153,7 +153,7 @@ export function Allocate({ onNext }: { onNext: () => void }) {
           className="flex flex-wrap items-end gap-3 text-sm"
           onSubmit={(e) => {
             e.preventDefault();
-            const t = Number(form.tonnes);
+            const t = Math.round(Number(form.tonnes) * 1000) / 1000;
             if (t > 0 && form.mrn) allocate(form.recipient, t, form.mrn);
           }}
         >

@@ -21,7 +21,9 @@ export interface LedgerPrecursor extends PrecursorInput {
 
 /** Open allocations addressed to the mill whose shipment reference is one of the delivery notes read. */
 export async function findPrecursors(chain: SandboxChain, deliveryNotes: string[]): Promise<LedgerPrecursor[]> {
-  const wanted = new Map(deliveryNotes.map((n) => [shipmentRef(n), n]));
+  // The reader may print "DN 2026 0642" for "DN-2026-0642": try the usual spellings.
+  const spellings = (n: string) => [n, n.trim().toUpperCase(), n.trim().toUpperCase().replace(/[\s_/]+/g, "-")];
+  const wanted = new Map(deliveryNotes.flatMap((n) => spellings(n).map((v) => [shipmentRef(v), n] as const)));
   const count = await chain.read("allocationCount", []);
   const out: LedgerPrecursor[] = [];
   for (let i = 0n; i < count; i++) {

@@ -9,6 +9,7 @@
 // throwaway keys with a little gas. Results go to lib/chain/deployments.json.
 import { readFile, writeFile } from "node:fs/promises";
 import {
+  bytesToHex,
   createPublicClient,
   createWalletClient,
   defineChain,
@@ -88,7 +89,9 @@ const state = { step: 0, runs: Object.fromEntries(documents.map((d) => [d.id, { 
 const precursor = { allocationId: inputId, label: "Pig iron", quantityTonnes: supplier.deliveredTonnes, directKgPerTonne: supplier.directKgPerTonne, indirectKgPerTonne: supplier.indirectKgPerTonne };
 const r = calculate(deriveLines(state).lines, [precursor]);
 const sefa = sefaActualCoil({ year: 2026, crudeSteelT: r.crudeSteelT, hotRolledT: r.hotRolledT, pigIronT: r.pigIronT });
-const report = commit(reportFields(r, { sefaKgPerTonne2026: Math.round(sefa.sefa * 1000) }), ids.mill);
+// A random salt seed, as the mill would hold it; keep it if you want to disclose fields later.
+const seed = bytesToHex(crypto.getRandomValues(new Uint8Array(32)));
+const report = commit(reportFields(r, { sefaKgPerTonne2026: Math.round(sefa.sefa * 1000) }), seed);
 const pre = precursorEmissions([{ quantityKg: BigInt(supplier.deliveredTonnes) * 1000n, directKgPerTonne: supplier.directKgPerTonne, indirectKgPerTonne: supplier.indirectKgPerTonne }]);
 const mill: Attestation = {
   installationId: ids.mill,

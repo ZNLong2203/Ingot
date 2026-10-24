@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { keccak256, toHex, type Hex } from "viem";
+import { bytesToHex, keccak256, toHex, type Hex } from "viem";
 import { actors } from "@/lib/chain/actors";
 import { sefaActualCoil } from "@/lib/cbam/cost";
 import type { CheckStatus } from "@/lib/cbam/checks";
@@ -9,7 +9,6 @@ import { DEFAULT_DISCLOSURES, commit, prepareAttestation, reportFields } from "@
 import { setState, useDemo } from "@/lib/demo/store";
 import { act, getWorld, sign } from "@/lib/demo/world";
 import { describe } from "@/lib/demo/explain";
-import { installation } from "@/lib/samples/marmara";
 import { Button } from "@/components/ui/Button";
 import { Hash } from "@/components/ui/Hash";
 import { Icon } from "@/components/ui/Icon";
@@ -31,7 +30,9 @@ export function Verify({ onNext }: { onNext: () => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const seed = useMemo<Hex>(() => s.signed?.reportSeed ?? keccak256(toHex(`marmara-q3-report-${installation.key}`)), [s.signed]);
+  // The salt seed is the mill's secret: random, kept with the signed statement, never on chain.
+  const [freshSeed] = useState<Hex>(() => bytesToHex(crypto.getRandomValues(new Uint8Array(32))));
+  const seed = s.signed?.reportSeed ?? freshSeed;
   const fields = useMemo(() => {
     if (!result) return null;
     if (s.signed) return s.signed.reportFields;

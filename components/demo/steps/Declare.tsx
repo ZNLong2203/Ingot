@@ -154,7 +154,7 @@ export function Declare() {
         <h3 className="flex items-center gap-2 font-display text-sm font-semibold">
           <Icon name="stamp" className="h-4 w-4 text-verifier" /> If the verifier finds a problem later
         </h3>
-        <p className="text-sm text-ink-2">Withdrawing a statement makes every passport that points at it fail at once, everywhere.</p>
+        <p className="text-sm text-ink-2">Withdrawing a statement makes every passport that points at it fail at once, and frees its precursors for a corrected statement.</p>
         <Cheat
           label="Withdraw the statement: the gas meter's calibration had expired"
           explain="Run as the verifier, then watch the checks above turn red."

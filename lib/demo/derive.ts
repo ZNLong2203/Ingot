@@ -84,7 +84,8 @@ export function deriveLines(state: DemoState): { lines: ActivityLine[]; duplicat
   }
 
   const lines: ActivityLine[] = [];
-  for (const d of docs) {
+  // Uploads are there to try the reader; only the mill's own sample documents feed the statement.
+  for (const d of docs.filter((x) => !x.id.startsWith("upload-"))) {
     d.extraction.lines.forEach((l, i) => {
       if (!STREAMS.has(l.stream as Stream)) return;
       const id = `${d.id}#${i}`;
@@ -102,7 +103,7 @@ export function deriveLines(state: DemoState): { lines: ActivityLine[]; duplicat
         carbonFraction: l.carbonFraction ?? undefined,
         carbonateKind: l.carbonateKind ?? undefined,
         gcvKcalPerSm3: l.gcvKcalPerSm3 ?? undefined,
-        excluded: dropped.get(d.id) ?? state.removed[id],
+        excluded: dropped.get(d.id) ?? state.removed[id] ?? (l.quantity > 0 ? undefined : "Quantity must be positive"),
       });
     });
   }

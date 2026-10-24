@@ -66,6 +66,8 @@ export class SandboxChain {
   readonly journal: ReplayEntry[] = [];
   registry!: Address;
   private blockNumber = 0;
+  /** Calls run one at a time, as a node would apply them; two clicks cannot interleave. */
+  private queue: Promise<unknown> = Promise.resolve();
   private clock: number;
 
   private constructor(
@@ -119,7 +121,20 @@ export class SandboxChain {
     this.clock += seconds;
   }
 
+  private serial<T>(fn: () => Promise<T>): Promise<T> {
+    const next = this.queue.then(fn, fn);
+    this.queue = next.catch(() => undefined);
+    return next;
+  }
+
   async read<N extends ReadName>(
+    functionName: N,
+    args: ContractFunctionArgs<Abi, "view" | "pure", N>,
+  ): Promise<ContractFunctionReturnType<Abi, "view" | "pure", N>> {
+    return this.serial(() => this.readNow(functionName, args));
+  }
+
+  private async readNow<N extends ReadName>(
     functionName: N,
     args: ContractFunctionArgs<Abi, "view" | "pure", N>,
   ): Promise<ContractFunctionReturnType<Abi, "view" | "pure", N>> {
@@ -137,6 +152,14 @@ export class SandboxChain {
   }
 
   async write<N extends WriteName>(
+    from: Address,
+    functionName: N,
+    args: ContractFunctionArgs<Abi, "nonpayable", N>,
+  ): Promise<SandboxTx> {
+    return this.serial(() => this.writeNow(from, functionName, args));
+  }
+
+  private async writeNow<N extends WriteName>(
     from: Address,
     functionName: N,
     args: ContractFunctionArgs<Abi, "nonpayable", N>,
