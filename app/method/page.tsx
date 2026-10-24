@@ -9,8 +9,8 @@ import { benchmarks, cbamFactor, certificatePrices, sources, turkeyDefaults } fr
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Method & limits",
-  description: "How Ingot calculates CBAM embedded emissions, which factors and benchmarks it uses and where they come from, what the contract guarantees, and what it does not.",
+  title: "Method",
+  description: "How Ingot calculates CBAM embedded emissions, which factors and benchmarks it uses and where they come from, and what the contract guarantees.",
 };
 
 function Section({ id, icon, tone, title, lead, children }: { id: string; icon: IconName; tone: "mill" | "engine" | "verifier" | "importer" | "chain" | "molten" | "verified" | "refused"; title: string; lead?: ReactNode; children: ReactNode }) {
@@ -55,9 +55,9 @@ export default function MethodPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 pb-10 sm:px-6">
       <header className="bg-hero -mx-4 border-b border-line px-4 pb-10 pt-12 sm:-mx-6 sm:px-6">
-        <p className="text-xs font-semibold uppercase tracking-wider text-chain">Method &amp; limits</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-chain">Method</p>
         <h1 className="mt-2 max-w-3xl font-display text-4xl font-extrabold tracking-tight">
-          How the numbers are made, and <span className="text-gradient">what they cannot tell you</span>
+          How <span className="text-gradient">every number</span> is made
         </h1>
         <nav className="mt-6 flex flex-wrap gap-2 text-sm">
           {[
@@ -66,7 +66,6 @@ export default function MethodPage() {
             ["obligation", "CBAM cost", "coins"],
             ["ledger", "Contract rules", "shieldCheck"],
             ["ai", "AI & security", "spark"],
-            ["limits", "Limits", "info"],
           ].map(([id, label, icon]) => (
             <a key={id} href={`#${id}`} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-card px-3 py-1.5 font-medium text-ink-2 hover:border-line-strong hover:text-ink">
               <Icon name={icon as IconName} className="h-4 w-4" /> {label}
@@ -342,22 +341,7 @@ Rolling    AttrEm = fuel × NCV × EF × OF                         Annex II B.3
         </div>
       </Section>
 
-      <Section id="limits" icon="info" tone="chain" title="Limits" lead="Said plainly, so nobody has to find them.">
-        <ul className="grid gap-2 text-sm md:grid-cols-2">
-          {[
-            "Companies, documents and quantities are fictional, inside the EU BAT ranges.",
-            "On a public chain, tonnage per statement is visible; production would use a permissioned EVM network.",
-            "Ingot does not replace the verifier, the site visit or the EU CBAM Registry; it adds one shared count of tonnes.",
-            "Partial use of a precursor allocation is not modelled; suppliers split deliveries instead.",
-            "The benchmark route reading, the floor at zero and the carbon-price deduction are stated assumptions.",
-            "The model can misread a number: every number shows its source, and a person signs.",
-          ].map((t) => (
-            <li key={t} className="card flex items-start gap-2 p-3">
-              <Icon name="info" className="mt-0.5 h-4 w-4 shrink-0 text-chain" />
-              <span className="text-ink-2">{t}</span>
-            </li>
-          ))}
-        </ul>
+      <section className="pt-14">
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/demo" className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-paper hover:bg-ink-2">
             <Icon name="play" /> Try the flow
@@ -366,7 +350,7 @@ Rolling    AttrEm = fuel × NCV × EF × OF                         Annex II B.3
             Source code
           </a>
         </div>
-      </Section>
+      </section>
     </main>
   );
 }

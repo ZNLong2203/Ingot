@@ -10,7 +10,7 @@ export function SiteFooter() {
         </p>
         <p className="flex gap-4">
           <Link href="/method" className="hover:text-ink">
-            Method &amp; limits
+            Method
           </Link>
           <a href={site.repo} className="hover:text-ink">
             Source (MIT)

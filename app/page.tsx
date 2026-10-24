@@ -201,7 +201,7 @@ export default function Home() {
               reaches the furnace.
             </p>
             <Link href="/method" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-chain hover:underline">
-              Method, sources and limits <Icon name="arrow" />
+              Method and sources <Icon name="arrow" />
             </Link>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">

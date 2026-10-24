@@ -14,6 +14,8 @@ Since 1 January 2026 EU importers pay for the carbon embedded in steel, aluminiu
 |---|---|---|
 | ![Calculation trace and cost per tonne](docs/images/02-calculate.png) | ![Shared and private report fields, refused transactions](docs/images/03-verify.png) | ![Passport checks and the saving](docs/images/05-declare.png) |
 
+The demo mill, its supplier and buyers, and their documents are fictional.
+
 ## The problem, in numbers
 
 - **€10.8 bn** of CBAM-covered goods went from Türkiye to the EU in 2025, second only to China; iron and steel were €7.2 bn of it ([Eurostat Comext via cbamguide.com](https://cbamguide.com/countries/turkey/)).
@@ -87,10 +89,6 @@ Optional: put `GEMINI_API_KEY` in `.env` to have Gemini read the documents (see 
 | `lib/demo/`, `components/` | The guided demo, ledger and passport pages |
 | `lib/samples/`, `public/samples/` | The fictional mill's evidence and the generator for its PDFs |
 | `docs/` | Architecture, security, impact, adoption, problem statement, testing |
-
-## Limits
-
-The companies, documents and quantities are fictional, chosen inside the EU BAT ranges. The demo runs the real contract on an EVM in the browser; a production network would be a permissioned EVM run by chambers of industry and verifiers. Ingot does not replace the verifier, the site visit or the EU Registry. Stated assumptions (the reading of the benchmark route indicators, the floor at zero, the carbon-price deduction) are marked in the code and on the [method page](app/method/page.tsx).
 
 ## Built with
 
