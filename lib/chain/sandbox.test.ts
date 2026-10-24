@@ -1,7 +1,7 @@
 import { keccak256, toHex } from "viem";
 import { describe, expect, it } from "vitest";
 import { actors } from "./actors";
-import { attestationTypes, registryDomain, type Attestation } from "./eip712";
+import { attestationTypes, hashInputs, registryDomain, type Attestation } from "./eip712";
 import { SandboxChain } from "./sandbox";
 
 const T0 = 1_777_000_000;
@@ -26,6 +26,9 @@ async function setup() {
     indirectKgPerTonne: 300,
     carbonPriceCentsPerTonne: 0,
     evidenceRoot: keccak256(toHex("root")),
+    inputsHash: hashInputs([]),
+    precursorDirectKg: 0n,
+    precursorIndirectKg: 0n,
     deadline: T0 + 86_400,
   };
   const signature = await actors.verifier.account.signTypedData({
@@ -34,7 +37,7 @@ async function setup() {
     primaryType: "Attestation",
     message: a,
   });
-  const tx = await chain.write(actors.operator.address, "submitStatement", [a, signature]);
+  const tx = await chain.write(actors.operator.address, "submitStatement", [a, signature, []]);
   return { chain, a, signature, tx };
 }
 
