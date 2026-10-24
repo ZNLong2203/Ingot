@@ -47,6 +47,7 @@ What Ingot protects, against whom, how, and what it leaves to people and process
 | T21 | A far-future period blocks later statements | Only finished periods can be verified | `FuturePeriod` |
 | T22 | A wrong statement cannot be corrected | Withdrawal reopens periods, precursors and customs references | `revokeStatement`; "corrections" tests |
 | T23 | A passport's displayed figures edited outside the signature | Displayed fields compared with the signed message | `checkPassport` |
+| T24 | A future quantum computer forges the verifier's ECDSA signature on old passports | Hybrid attestation: the verifier also signs the statement id with ML-DSA-65 (FIPS 204); the registry stores the key's hash; the passport check requires both | `setVerifierPqKey`, `lib/crypto/pq.ts` |
 
 ## What the contract cannot do
 
@@ -59,8 +60,8 @@ What Ingot protects, against whom, how, and what it leaves to people and process
 
 ## Tests
 
-- 29 contract tests (`contracts/test/`): every refusal above with its arguments, the precursor arithmetic (direct and indirect floors), revocation and the correction path, the guards, and a randomised sequence that checks the available quantity after each of 60 allocations.
-- 24 unit tests (`lib/**/*.test.ts`): the engine against hand-computed values, disclosure proofs including forged values and foreign roots, the in-page EVM against the same bytecode, concurrent clicks, and the full demo flow including passports edited inside and outside the signature.
+- 30 contract tests (`contracts/test/`): every refusal above with its arguments, the precursor arithmetic (direct and indirect floors), revocation and the correction path, the guards, and a randomised sequence that checks the available quantity after each of 60 allocations.
+- 28 unit tests (`lib/**/*.test.ts`): the engine against hand-computed values, disclosure proofs including forged values and foreign roots, the in-page EVM against the same bytecode, concurrent clicks, and the full demo flow including passports edited inside and outside the signature.
 
 ## Independent review
 

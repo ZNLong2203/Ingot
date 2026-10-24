@@ -44,6 +44,9 @@ const guarantees: { title: string; error: string; body: string; icon: IconName }
   { title: "Ends once", error: "AllocationNotOpen", body: "Declared or consumed downstream, never both, never twice.", icon: "check" },
   { title: "No laundering", error: "BelowPrecursorEmissions", body: "Precursor carbon recomputed on chain; the product cannot carry less.", icon: "flame" },
   { title: "Private by default", error: "verifyDisclosure", body: "Only a salted Merkle root on chain; fields proven one at a time.", icon: "lock" },
+  { title: "Quantum-ready", error: "pqKeyHash", body: "Verifiers co-sign with ML-DSA-65 (FIPS 204); the key's hash is registered on chain.", icon: "shieldCheck" },
+  { title: "Correctable", error: "Reopened", body: "Withdrawing a statement reopens its period, precursors and customs references.", icon: "reset" },
+  { title: "No self-attestation", error: "SelfAttestation", body: "A verifier cannot sign for an installation it operates.", icon: "scale" },
 ];
 
 const years = Object.entries(cbamFactor);
@@ -292,7 +295,7 @@ Rolling    AttrEm = fuel × NCV × EF × OF                         Annex II B.3
           ))}
         </div>
         <p className="mt-4 flex flex-wrap gap-2 text-xs">
-          {["29 contract tests", "24 unit tests", "60-step randomised allocation test", "independent review, findings fixed", "browser walkthrough"].map((t) => (
+          {["30 contract tests", "28 unit tests", "60-step randomised allocation test", "independent review, findings fixed", "browser walkthrough"].map((t) => (
             <span key={t} className="rounded-full bg-verified-soft px-2.5 py-1 font-medium text-verified">
               {t}
             </span>

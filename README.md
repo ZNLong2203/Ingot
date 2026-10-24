@@ -60,15 +60,15 @@ Claude Opus 5.5 reads documents into schema-checked lines (`lib/ai`), each with 
 
 ## Security and data integrity
 
-Signatures are EIP-712 with a domain bound to one chain and contract, and expire; verifiers are accredited, suspendable and time-limited; every state change is a custom error away from refusal. The threat model (forged evidence, collusion, replay, front-running, key loss, privacy on a public chain) and what remains outside the contract's reach are in [docs/security.md](docs/security.md).
+Verifiers sign twice: EIP-712 (ECDSA) for the contract, and **ML-DSA-65 (FIPS 204), a post-quantum signature**, over the same statement id, whose public key hash the registry stores, so a passport stays checkable once ECDSA can be forged. Signatures are bound to one chain and contract, and expire; verifiers are accredited, suspendable and time-limited; every state change is a custom error away from refusal. The threat model (forged evidence, collusion, replay, front-running, key loss, privacy on a public chain) and what remains outside the contract's reach are in [docs/security.md](docs/security.md).
 
 ## Run it
 
 ```bash
 npm install
 npm run dev                  # http://localhost:3000, the EVM runs in the page
-npm test                     # 24 unit tests: engine, disclosure proofs, sandbox EVM, the whole demo flow
-npm run contracts:test       # 29 contract tests (Hardhat 3, node:test, viem)
+npm test                     # 28 unit tests: engine, disclosure proofs, post-quantum co-signatures, sandbox EVM, the whole demo flow
+npm run contracts:test       # 30 contract tests (Hardhat 3, node:test, viem)
 npm run contracts:build      # compile and export the ABI and bytecode to lib/chain
 node e2e/walkthrough.ts      # click through the demo in Chrome (BASE_URL, CHROME_PATH)
 ```

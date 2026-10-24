@@ -57,7 +57,7 @@ function PassportVisual() {
             <span className="num font-display text-xl font-extrabold text-importer">€593,717</span>
           </div>
           <div className="mt-4 flex flex-wrap gap-1.5 text-[11px]">
-            {["EIP-712 signed", "Merkle disclosures", "1 precursor verified", "declared once"].map((t) => (
+            {["EIP-712 + ML-DSA-65 signed", "Merkle disclosures", "1 precursor verified", "declared once"].map((t) => (
               <span key={t} className="rounded-full bg-paper-2 px-2 py-0.5 text-muted">
                 {t}
               </span>

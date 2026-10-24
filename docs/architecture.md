@@ -58,7 +58,7 @@ Precursor arithmetic is integer-exact: `floor(Σ quantityKg × kgPerTonne / 1000
 A shipment's passport (`lib/passport.ts`) is shaped as a W3C Verifiable Credential (`@context` v2, type `CbamEmbeddedEmissionsPassport`), with:
 
 - `credentialSubject`: installation, CN code, period, specific embedded emissions, the allocation (id, tonnes, recipient, customs reference) and the disclosed report fields with their proofs;
-- `proof`: `EthereumEip712Signature2021`, with the typed data and the verifier's signature (`did:pkh` verification method);
+- `proof`: `EthereumEip712Signature2021`, with the typed data and the verifier's signature (`did:pkh` verification method), plus a post-quantum co-signature: ML-DSA-65 (FIPS 204) over the statement id, with the public key whose keccak256 the registry stores for that verifier (`pqKeyHash`);
 - `anchor`: chain id, registry address and statement id.
 
 `checkPassport` validates it without trusting the sender: domain matches the registry; the typed data hashes to the statement id; the signature recovers to the statement's verifier, still accredited; the statement exists and is live; the allocation matches statement, recipient and tonnes; every consumed precursor's statement is live; every disclosed field verifies against the evidence root.
