@@ -43,7 +43,7 @@ export async function write(chain: SandboxChain, role: Role, functionName: strin
 }
 
 /** The smelter's report fields, committed the same way the mill's are. */
-const smelterReport = {
+export const smelterReport = {
   installation: supplier.name,
   cnCode: supplier.good.cnCode,
   period: supplier.period.label,
@@ -52,15 +52,11 @@ const smelterReport = {
   indirectKgPerTonne: supplier.indirectKgPerTonne,
   route: "Blast furnace, sinter and pellets",
 };
+export const smelterSeed = keccak256(toHex("demo-gusa-report-seed"));
 
-async function seed(chain: SandboxChain) {
-  const until = T0 + 2 * 365 * 86_400;
-  await write(chain, "authority", "accreditVerifier", [actors.verifier.address, actors.verifier.name, until]);
-  await write(chain, "authority", "accreditVerifier", [actors.verifier2.address, actors.verifier2.name, until]);
-  await write(chain, "verifier2", "registerInstallation", [ids.smelter, actors.supplier.address, "0x4252", keccak256(toHex(JSON.stringify(supplier)))]);
-  await write(chain, "verifier", "registerInstallation", [ids.mill, actors.operator.address, "0x5452", keccak256(toHex(JSON.stringify(installation)))]);
-
-  const a: Attestation = {
+/** The smelter's signed statement, identical in every browser. */
+export function smelterAttestation(): Attestation {
+  return {
     installationId: ids.smelter,
     cnCode: supplier.good.cnCode,
     periodStart: unix(supplier.period.from),
@@ -69,21 +65,34 @@ async function seed(chain: SandboxChain) {
     directKgPerTonne: supplier.directKgPerTonne,
     indirectKgPerTonne: supplier.indirectKgPerTonne,
     carbonPriceCentsPerTonne: 0,
-    evidenceRoot: commit(smelterReport, keccak256(toHex("demo-gusa-report-seed"))).root,
+    evidenceRoot: commit(smelterReport, smelterSeed).root,
     inputsHash: hashInputs([]),
     precursorDirectKg: 0n,
     precursorIndirectKg: 0n,
-    deadline: chain.now + 30 * 86_400,
+    deadline: T0 + 30 * 86_400,
   };
+}
+
+/** The seeded delivery to the second buyer: the example passport on /verify. */
+export const exampleDelivery = { reference: "DN-2026-0577", tonnes: 12_000, index: 1n };
+
+async function seed(chain: SandboxChain) {
+  const until = T0 + 2 * 365 * 86_400;
+  await write(chain, "authority", "accreditVerifier", [actors.verifier.address, actors.verifier.name, until]);
+  await write(chain, "authority", "accreditVerifier", [actors.verifier2.address, actors.verifier2.name, until]);
+  await write(chain, "verifier2", "registerInstallation", [ids.smelter, actors.supplier.address, "0x4252", keccak256(toHex(JSON.stringify(supplier)))]);
+  await write(chain, "verifier", "registerInstallation", [ids.mill, actors.operator.address, "0x5452", keccak256(toHex(JSON.stringify(installation)))]);
+
+  const a = smelterAttestation();
   const tx = await write(chain, "supplier", "submitStatement", [a, await sign(chain, "verifier2", a), []]);
   const pigId = tx.result as Hex;
   await write(chain, "supplier", "allocate", [pigId, actors.operator.address, BigInt(supplier.deliveredTonnes) * 1000n, shipmentRef(supplier.deliveryNote)]);
   // Another customer's delivery, so the smelter's statement shows more than one buyer.
-  await write(chain, "supplier", "allocate", [pigId, actors.importer2.address, 12_000_000n, shipmentRef("DN-2026-0577")]);
+  await write(chain, "supplier", "allocate", [pigId, actors.importer2.address, BigInt(exampleDelivery.tonnes) * 1000n, shipmentRef(exampleDelivery.reference)]);
 }
 
 let world: Promise<SandboxChain> | null = null;
-const KEY = "ingot.sandbox.v1";
+const KEY = "ingot.sandbox.v2";
 type Listener = () => void;
 const listeners = new Set<Listener>();
 let version = 0;

@@ -52,7 +52,7 @@ export interface DemoState {
   shipments: Shipment[];
 }
 
-const KEY = "ingot.demo.v1";
+const KEY = "ingot.demo.v2";
 const initial: DemoState = { step: 0, runs: {}, uploads: [], removed: {}, shipments: [] };
 
 let state: DemoState = initial;

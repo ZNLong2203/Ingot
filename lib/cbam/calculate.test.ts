@@ -8,7 +8,7 @@ function referenceLines(includeCopy = false): ActivityLine[] {
     .filter((d) => includeCopy || !d.id.endsWith("-copy"))
     .flatMap((d) =>
       d.lines
-        .filter((l) => d.kind !== "delivery_note")
+        .filter(() => d.kind !== "delivery_note")
         .map((l, i) => ({ ...l, id: `${d.id}#${i}`, documentId: d.id, documentNumber: d.documentNumber })),
     );
 }

@@ -68,6 +68,18 @@ await click(/Declare the same allocation/);
 await page.getByText(/AllocationNotOpen/).first().waitFor();
 await shot("05-declare");
 
+await page.goto(`${BASE}/ledger`);
+await page.getByText(/consumed/).first().waitFor();
+await shot("06-ledger");
+
+await page.goto(`${BASE}/verify`);
+await click(/Load the example/);
+await page.getByText(/valid · open/).waitFor();
+await shot("07-verify");
+
+await page.goto(`${BASE}/method`);
+await shot("08-method");
+
 }
 
 try {

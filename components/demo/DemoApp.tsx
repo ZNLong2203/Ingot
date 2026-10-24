@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { actors } from "@/lib/chain/actors";
 import { resetDemo, setState, useDemo } from "@/lib/demo/store";
 import { resetWorld } from "@/lib/demo/world";
@@ -24,8 +24,12 @@ const STEPS = [
 export function DemoApp() {
   const s = useDemo();
   const chain = useChain();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  // Saved progress lives in localStorage, so the server renders step one.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   const done = [
     STEPS.length && Object.values(s.runs).filter((r) => r.status === "done").length >= 7,
