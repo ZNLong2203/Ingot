@@ -78,7 +78,8 @@ export function DemoApp() {
                     type="button"
                     onClick={() => go(i)}
                     aria-current={active ? "step" : undefined}
-                    className={`group w-full rounded-xl border px-3 py-2.5 text-left transition ${
+                    aria-label={`Step ${i + 1}: ${st.title}`}
+                    className={`group w-full rounded-xl border px-2 py-2 text-left transition sm:px-3 sm:py-2.5 ${
                       active ? `${r.soft} ${r.border} shadow-sm ring-1 ring-inset ${r.border}` : "border-line bg-card hover:bg-paper-2"
                     }`}
                   >
@@ -94,7 +95,10 @@ export function DemoApp() {
                         <span className="num text-xs font-semibold text-muted">{i + 1}</span>
                       )}
                     </span>
-                    <span className={`mt-2 block truncate text-sm font-semibold ${active ? r.text : ""}`}>{st.title}</span>
+                    <span className={`mt-2 block truncate text-xs font-semibold sm:text-sm ${active ? r.text : ""}`}>
+                      <span className="sm:hidden">{active ? st.title : ""}</span>
+                      <span className="hidden sm:inline">{st.title}</span>
+                    </span>
                     <span className="hidden truncate text-xs text-muted md:block">{st.who}</span>
                   </button>
                 </li>

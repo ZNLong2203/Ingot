@@ -72,7 +72,7 @@ function PassportVisual() {
 export default function Home() {
   return (
     <main>
-      <section className="bg-hero border-b border-line">
+      <section className="bg-hero overflow-hidden border-b border-line">
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-14 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:py-20">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full border border-line bg-card/70 px-3 py-1 text-xs font-medium text-ink-2">

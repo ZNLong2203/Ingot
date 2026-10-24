@@ -21,7 +21,7 @@ export function SiteHeader() {
           <Logo className="h-6 w-6" />
           {site.name}
         </Link>
-        <nav aria-label="Main" className="ml-auto flex items-center gap-1 overflow-x-auto text-sm">
+        <nav aria-label="Main" className="ml-auto flex items-center gap-0.5 text-sm sm:gap-1">
           {nav.map((n) => {
             const active = path.startsWith(n.href);
             return (
@@ -33,8 +33,9 @@ export function SiteHeader() {
                   active ? "bg-card text-ink shadow-sm ring-1 ring-line" : "text-ink-2 hover:bg-paper-2 hover:text-ink"
                 }`}
               >
-                <Icon name={n.icon} className="hidden h-4 w-4 sm:block" />
-                {n.label}
+                <Icon name={n.icon} className="h-4 w-4" />
+                <span className="hidden sm:inline">{n.label}</span>
+                <span className="sr-only sm:hidden">{n.label}</span>
               </Link>
             );
           })}
@@ -42,7 +43,8 @@ export function SiteHeader() {
             href="/demo"
             className="ml-1 inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-gradient-to-r from-[var(--molten)] to-[#f59e0b] px-3 py-1.5 font-semibold text-white shadow-sm hover:brightness-110"
           >
-            <Icon name="play" className="h-4 w-4" /> Try the flow
+            <Icon name="play" className="h-4 w-4" /> <span className="hidden sm:inline">Try the flow</span>
+            <span className="sm:hidden">Demo</span>
           </Link>
         </nav>
       </div>
