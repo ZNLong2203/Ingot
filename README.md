@@ -42,6 +42,8 @@ For the demo's mill, verified data means **0.354 t CO2e/t instead of 2.671**, an
 3. **A tonne ends once.** Each allocation is declared at the border or consumed by a downstream statement, never both, never twice (`AllocationNotOpen`).
 4. **Carbon cannot be laundered.** A downstream statement must carry the precursor emissions the contract **recomputes** from the upstream statements (`PrecursorEmissionsMismatch`), and its total may not fall below them (`BelowPrecursorEmissions`). Even a bribed verifier cannot make a re-rolled coil cleaner than the pig iron inside it.
 
+Mistakes can be corrected: withdrawing a statement reopens its period (and any withdrawn ones before it), returns the precursors it consumed, and frees its customs references for the corrected statement.
+
 Only commitments go on chain: the full report is a Merkle tree of salted fields, so a single field can be proven (`verifyDisclosure`) without revealing the rest. See [docs/architecture.md](docs/architecture.md).
 
 ## Why a ledger, and not another CBAM SaaS
@@ -65,8 +67,8 @@ Signatures are EIP-712 with a domain bound to one chain and contract, and expire
 ```bash
 npm install
 npm run dev                  # http://localhost:3000, the EVM runs in the page
-npm test                     # 22 unit tests: engine, disclosure proofs, sandbox EVM, the whole demo flow
-npm run contracts:test       # 21 contract tests (Hardhat 3, node:test, viem)
+npm test                     # 24 unit tests: engine, disclosure proofs, sandbox EVM, the whole demo flow
+npm run contracts:test       # 29 contract tests (Hardhat 3, node:test, viem)
 npm run contracts:build      # compile and export the ABI and bytecode to lib/chain
 node e2e/walkthrough.ts      # click through the demo in Chrome (BASE_URL, CHROME_PATH)
 ```

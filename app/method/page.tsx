@@ -292,7 +292,7 @@ Rolling    AttrEm = fuel × NCV × EF × OF                         Annex II B.3
           ))}
         </div>
         <p className="mt-4 flex flex-wrap gap-2 text-xs">
-          {["21 contract tests", "22 unit tests", "60-step randomised allocation test", "browser walkthrough in CI-ready Playwright"].map((t) => (
+          {["29 contract tests", "24 unit tests", "60-step randomised allocation test", "independent review, findings fixed", "browser walkthrough"].map((t) => (
             <span key={t} className="rounded-full bg-verified-soft px-2.5 py-1 font-medium text-verified">
               {t}
             </span>
